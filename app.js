@@ -1,4 +1,5 @@
 // Инициализация Supabase
+const { createClient } = supabase;
 const supabaseUrl = "https://ycsxkmrroywcyvamfvoz.supabase.co";
 const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inljc3hrbXJyb3l3Y3l2YW1mdm96Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2MjUzMzYsImV4cCI6MjA1ODIwMTMzNn0._XpzVMDhYF3tLjqoC72_2kOZ5baTE3OeOIZyyuonK2s";
 const supabase = supabase.createClient(supabaseUrl, supabaseKey);
