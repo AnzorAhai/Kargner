@@ -35,14 +35,15 @@ function showRegisterForm() {
     document.getElementById('login-form').style.display = 'none';
 }
 
-// Добавь обработчики событий для кнопок
-document.getElementById('login-button').addEventListener('click', () => {
-    showLoginForm();
-});
+window.showLoginForm = function() {
+    document.getElementById('login-form').style.display = 'block';
+    document.getElementById('register-form').style.display = 'none';
+};
 
-document.getElementById('register-button').addEventListener('click', () => {
-    showRegisterForm();
-});
+window.showRegisterForm = function() {
+    document.getElementById('register-form').style.display = 'block';
+    document.getElementById('login-form').style.display = 'none';
+};
 
 // Вход пользователя
 document.getElementById('login-form').addEventListener('submit', async (e) => {
