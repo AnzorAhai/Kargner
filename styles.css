@@ -36,6 +36,11 @@ button:hover {
     background-color: #0056b3;
 }
 
+#auth-buttons button {
+    width: 48%;
+    margin: 1%;
+}
+
 .order-card {
     border: 1px solid #ccc;
     padding: 10px;

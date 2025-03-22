@@ -23,63 +23,75 @@ async function isAdmin(userId) {
     return !!data;
 }
 
-// Получаем данные пользователя из Telegram
-const user = tg.initDataUnsafe.user;
-if (user) {
-    isAdmin(user.id.toString()).then((isAdmin) => {
-        currentUser = {
-            id: user.id.toString(),
-            firstName: user.first_name,
-            lastName: user.last_name || "",
-            phone: "", // Телефон не передаётся через Telegram Web App
-            isAdmin: isAdmin, // Указываем, является ли админом
-        };
-        document.getElementById("registration-section").style.display = "none";
-        showSection("orders-board");
-        renderOrdersBoard();
-        renderBottomMenu();
-
-        // Показываем кнопку администратора, если пользователь — админ
-        if (currentUser.isAdmin) {
-            document.getElementById("admin-button").style.display = "block";
-        }
-    });
+// Показать форму входа
+function showLoginForm() {
+    document.getElementById('login-form').style.display = 'block';
+    document.getElementById('register-form').style.display = 'none';
 }
 
-// Регистрация пользователя
-document.getElementById("registration-form").addEventListener("submit", async (e) => {
+// Показать форму регистрации
+function showRegisterForm() {
+    document.getElementById('register-form').style.display = 'block';
+    document.getElementById('login-form').style.display = 'none';
+}
+
+// Вход пользователя
+document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const firstName = document.getElementById("firstName").value;
-    const lastName = document.getElementById("lastName").value;
-    const phone = document.getElementById("phone").value;
+    const username = document.getElementById('login-username').value;
+    const password = document.getElementById('login-password').value;
 
-    const newUser = {
-        id: user ? user.id.toString() : Date.now().toString(), // Используем ID из Telegram, если есть
-        first_name: firstName,
-        last_name: lastName,
-        phone,
-        is_admin: false, // По умолчанию пользователь не админ
-    };
-
-    // Сохраняем пользователя в Supabase
     const { data, error } = await supabase
-        .from("users")
-        .insert([newUser]);
+        .from('users')
+        .select('*')
+        .eq('username', username)
+        .eq('password', password)
+        .single();
 
-    if (error) {
-        console.error("Ошибка при регистрации:", error);
-        alert("Произошла ошибка при регистрации.");
+    if (error || !data) {
+        alert('Неверное имя пользователя или пароль.');
         return;
     }
 
-    currentUser = newUser;
+    currentUser = data;
+    showMainSections();
+});
 
-    // Скрываем регистрацию и показываем доску заказов
-    document.getElementById("registration-section").style.display = "none";
-    showSection("orders-board");
+// Регистрация пользователя
+document.getElementById('register-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('register-username').value;
+    const password = document.getElementById('register-password').value;
+    const phone = document.getElementById('register-phone').value;
+
+    const { data, error } = await supabase
+        .from('users')
+        .insert([{ username, password, phone, is_admin: false }])
+        .select()
+        .single();
+
+    if (error) {
+        alert('Ошибка при регистрации.');
+        return;
+    }
+
+    currentUser = data;
+    showMainSections();
+});
+
+// Показать основные разделы после авторизации
+function showMainSections() {
+    document.getElementById('auth-section').style.display = 'none';
+    document.getElementById('main-sections').style.display = 'block';
+    document.querySelector('.bottom-menu').style.display = 'flex';
+
+    if (currentUser.is_admin) {
+        document.getElementById('admin-button').style.display = 'block';
+    }
+
     renderOrdersBoard();
     renderBottomMenu();
-});
+}
 
 // Отображение доски заказов
 async function renderOrdersBoard() {
