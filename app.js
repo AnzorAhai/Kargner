@@ -1,21 +1,7 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
-
-// Конфигурация Firebase
-const firebaseConfig = {
-    apiKey: "AIzaSyC03jHJLUTcHnWhkWwwFBtR_L4So9sXWl0",
-    authDomain: "kargner-5c462.firebaseapp.com",
-    databaseURL: "https://kargner-5c462-default-rtdb.firebaseio.com",
-    projectId: "kargner-5c462",
-    storageBucket: "kargner-5c462.firebasestorage.app",
-    messagingSenderId: "742154397087",
-    appId: "1:742154397087:web:bc12af179060e59f7fc9aa",
-    measurementId: "G-PY5EQK170H"
-};
-
-// Инициализация Firebase
-const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
+// Инициализация Supabase
+const supabaseUrl = "https://ycsxkmrroywcyvamfvoz.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inljc3hrbXJyb3l3Y3l2YW1mdm96Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2MjUzMzYsImV4cCI6MjA1ODIwMTMzNn0._XpzVMDhYF3tLjqoC72_2kOZ5baTE3OeOIZyyuonK2s";
+const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
 // Инициализация Telegram Web App
 const tg = window.Telegram.WebApp;
@@ -26,12 +12,13 @@ tg.MainButton.onClick(() => tg.close());
 let currentUser = null; // Текущий пользователь
 
 // Проверка, является ли пользователь администратором
-function isAdmin(userId) {
-    return new Promise((resolve) => {
-        onValue(ref(database, `admins/${userId}`), (snapshot) => {
-            resolve(snapshot.exists());
-        });
-    });
+async function isAdmin(userId) {
+    const { data, error } = await supabase
+        .from("admins")
+        .select("*")
+        .eq("id", userId)
+        .single();
+    return !!data;
 }
 
 // Получаем данные пользователя из Telegram
@@ -58,7 +45,7 @@ if (user) {
 }
 
 // Регистрация пользователя
-document.getElementById("registration-form").addEventListener("submit", (e) => {
+document.getElementById("registration-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const firstName = document.getElementById("firstName").value;
     const lastName = document.getElementById("lastName").value;
@@ -66,14 +53,23 @@ document.getElementById("registration-form").addEventListener("submit", (e) => {
 
     const newUser = {
         id: user ? user.id.toString() : Date.now().toString(), // Используем ID из Telegram, если есть
-        firstName,
-        lastName,
+        first_name: firstName,
+        last_name: lastName,
         phone,
-        isAdmin: false, // По умолчанию пользователь не админ
+        is_admin: false, // По умолчанию пользователь не админ
     };
 
-    // Сохраняем пользователя в Firebase
-    set(ref(database, `users/${newUser.id}`), newUser);
+    // Сохраняем пользователя в Supabase
+    const { data, error } = await supabase
+        .from("users")
+        .insert([newUser]);
+
+    if (error) {
+        console.error("Ошибка при регистрации:", error);
+        alert("Произошла ошибка при регистрации.");
+        return;
+    }
+
     currentUser = newUser;
 
     // Скрываем регистрацию и показываем доску заказов
@@ -84,92 +80,134 @@ document.getElementById("registration-form").addEventListener("submit", (e) => {
 });
 
 // Отображение доски заказов
-function renderOrdersBoard() {
+async function renderOrdersBoard() {
     const ordersList = document.getElementById("orders-list");
     ordersList.innerHTML = "";
 
-    onValue(ref(database, "orders"), (snapshot) => {
-        const orders = snapshot.val() || {};
-        Object.values(orders).forEach((order) => {
-            const orderCard = document.createElement("div");
-            orderCard.className = "order-card";
-            orderCard.innerHTML = `
-                <img src="${order.photo}" alt="Фото заказа">
-                <h3>${order.title}</h3>
-                <p>Адрес: ${order.address}</p>
-                <p>Статус: ${order.status === "active" ? "Активен" : "Завершён"}</p>
-            `;
-            orderCard.addEventListener("click", () => showOrderDetails(order.id));
-            ordersList.appendChild(orderCard);
-        });
+    const { data: orders, error } = await supabase
+        .from("orders")
+        .select("*");
+
+    if (error) {
+        console.error("Ошибка при загрузке заказов:", error);
+        return;
+    }
+
+    orders.forEach((order) => {
+        const orderCard = document.createElement("div");
+        orderCard.className = "order-card";
+        orderCard.innerHTML = `
+            <img src="${order.photo}" alt="Фото заказа">
+            <h3>${order.title}</h3>
+            <p>Адрес: ${order.address}</p>
+            <p>Статус: ${order.status === "active" ? "Активен" : "Завершён"}</p>
+        `;
+        orderCard.addEventListener("click", () => showOrderDetails(order.id));
+        ordersList.appendChild(orderCard);
     });
 }
 
 // Детали заказа
-function showOrderDetails(orderId) {
-    onValue(ref(database, `orders/${orderId}`), (snapshot) => {
-        const order = snapshot.val();
-        const orderContent = document.getElementById("order-content");
-        orderContent.innerHTML = `
-            <img src="${order.photo}" alt="Фото заказа" style="width: 100%;">
-            <p>Адрес: ${order.address}</p>
-            <p>Описание: ${order.description}</p>
-            <div id="bids-list"></div>
-            <input type="number" id="bid-amount" placeholder="Ваша ставка">
-            <button onclick="placeBid('${orderId}')">Сделать ставку</button>
-        `;
-        renderBids(orderId);
-        showSection("order-details");
-    });
+async function showOrderDetails(orderId) {
+    const { data: order, error } = await supabase
+        .from("orders")
+        .select("*")
+        .eq("id", orderId)
+        .single();
+
+    if (error) {
+        console.error("Ошибка при загрузке заказа:", error);
+        return;
+    }
+
+    const orderContent = document.getElementById("order-content");
+    orderContent.innerHTML = `
+        <img src="${order.photo}" alt="Фото заказа" style="width: 100%;">
+        <p>Адрес: ${order.address}</p>
+        <p>Описание: ${order.description}</p>
+        <div id="bids-list"></div>
+        <input type="number" id="bid-amount" placeholder="Ваша ставка">
+        <button onclick="placeBid('${orderId}')">Сделать ставку</button>
+    `;
+    renderBids(orderId);
+    showSection("order-details");
 }
 
 // Ставки
-function placeBid(orderId) {
+async function placeBid(orderId) {
     const amount = parseFloat(document.getElementById("bid-amount").value);
     if (!amount) return alert("Введите сумму ставки!");
 
     const bid = {
-        userId: currentUser.id,
+        user_id: currentUser.id,
         amount,
-        timestamp: Date.now(),
+        timestamp: new Date().toISOString(),
     };
 
-    set(ref(database, `orders/${orderId}/bids/${Date.now()}`), bid);
+    const { data, error } = await supabase
+        .from("bids")
+        .insert([bid]);
+
+    if (error) {
+        console.error("Ошибка при создании ставки:", error);
+        alert("Произошла ошибка при создании ставки.");
+        return;
+    }
+
+    renderBids(orderId);
 }
 
 // Отображение ставок
-function renderBids(orderId) {
+async function renderBids(orderId) {
     const bidsList = document.getElementById("bids-list");
     bidsList.innerHTML = "";
 
-    onValue(ref(database, `orders/${orderId}/bids`), (snapshot) => {
-        const bids = snapshot.val() || {};
-        Object.values(bids).forEach((bid) => {
-            const bidElement = document.createElement("p");
-            bidElement.textContent = `Ставка: ${bid.amount} руб.`;
-            bidsList.appendChild(bidElement);
-        });
+    const { data: bids, error } = await supabase
+        .from("bids")
+        .select("*")
+        .eq("order_id", orderId);
+
+    if (error) {
+        console.error("Ошибка при загрузке ставок:", error);
+        return;
+    }
+
+    bids.forEach((bid) => {
+        const bidElement = document.createElement("p");
+        bidElement.textContent = `Ставка: ${bid.amount} руб.`;
+        bidsList.appendChild(bidElement);
     });
 }
 
 // Завершение аукциона через 1 час
 function startAuctionTimer(orderId) {
-    setTimeout(() => {
-        onValue(ref(database, `orders/${orderId}`), (snapshot) => {
-            const order = snapshot.val();
-            if (!order || order.status !== "active") return;
+    setTimeout(async () => {
+        const { data: order, error } = await supabase
+            .from("orders")
+            .select("*")
+            .eq("id", orderId)
+            .single();
 
-            if (order.bids && Object.keys(order.bids).length > 0) {
-                // Находим минимальную ставку
-                const winningBid = Object.values(order.bids).reduce((min, bid) => (bid.amount < min.amount ? bid : min));
-                set(ref(database, `orders/${orderId}/winnerId`), winningBid.userId);
+        if (error || !order || order.status !== "active") return;
 
-                // Уведомляем победителя
-                notifyWinner(winningBid.userId, order);
-            }
+        const { data: bids, error: bidsError } = await supabase
+            .from("bids")
+            .select("*")
+            .eq("order_id", orderId);
 
-            set(ref(database, `orders/${orderId}/status`), "completed");
-        });
+        if (bidsError || !bids.length) return;
+
+        // Находим минимальную ставку
+        const winningBid = bids.reduce((min, bid) => (bid.amount < min.amount ? bid : min));
+
+        // Обновляем заказ
+        await supabase
+            .from("orders")
+            .update({ winner_id: winningBid.user_id, status: "completed" })
+            .eq("id", orderId);
+
+        // Уведомляем победителя
+        notifyWinner(winningBid.user_id, order);
     }, 3600000); // 1 час = 3600000 мс
 }
 
@@ -199,19 +237,22 @@ function sendNotification(userId, message) {
 }
 
 // Назначение администратора
-function assignAdmin() {
+async function assignAdmin() {
     const adminId = document.getElementById("admin-id").value;
     if (!adminId) return alert("Введите Telegram ID!");
 
     // Добавляем ID в список администраторов
-    set(ref(database, `admins/${adminId}`), true)
-        .then(() => {
-            alert("Администратор назначен!");
-        })
-        .catch((error) => {
-            console.error("Ошибка:", error);
-            alert("Произошла ошибка при назначении администратора.");
-        });
+    const { data, error } = await supabase
+        .from("admins")
+        .insert([{ id: adminId }]);
+
+    if (error) {
+        console.error("Ошибка при назначении администратора:", error);
+        alert("Произошла ошибка при назначении администратора.");
+        return;
+    }
+
+    alert("Администратор назначен!");
 }
 
 // Навигация
@@ -236,25 +277,30 @@ function goBack() {
 }
 
 // Раздел "Мои заказы"
-function renderMyOrders() {
+async function renderMyOrders() {
     const myOrdersList = document.getElementById("my-orders-list");
     myOrdersList.innerHTML = "";
 
-    onValue(ref(database, "orders"), (snapshot) => {
-        const orders = snapshot.val() || {};
-        Object.values(orders).forEach((order) => {
-            if (order.winnerId === currentUser.id) {
-                const orderCard = document.createElement("div");
-                orderCard.className = "order-card";
-                orderCard.innerHTML = `
-                    <img src="${order.photo}" alt="Фото заказа">
-                    <h3>${order.title}</h3>
-                    <p>Адрес: ${order.address}</p>
-                    <p>Описание: ${order.description}</p>
-                `;
-                myOrdersList.appendChild(orderCard);
-            }
-        });
+    const { data: orders, error } = await supabase
+        .from("orders")
+        .select("*")
+        .eq("winner_id", currentUser.id);
+
+    if (error) {
+        console.error("Ошибка при загрузке заказов:", error);
+        return;
+    }
+
+    orders.forEach((order) => {
+        const orderCard = document.createElement("div");
+        orderCard.className = "order-card";
+        orderCard.innerHTML = `
+            <img src="${order.photo}" alt="Фото заказа">
+            <h3>${order.title}</h3>
+            <p>Адрес: ${order.address}</p>
+            <p>Описание: ${order.description}</p>
+        `;
+        myOrdersList.appendChild(orderCard);
     });
 }
 
@@ -262,8 +308,8 @@ function renderMyOrders() {
 function renderProfile() {
     const profileInfo = document.getElementById("profile-info");
     profileInfo.innerHTML = `
-        <p>Имя: ${currentUser.firstName}</p>
-        <p>Фамилия: ${currentUser.lastName}</p>
+        <p>Имя: ${currentUser.first_name}</p>
+        <p>Фамилия: ${currentUser.last_name}</p>
         <p>Телефон: ${currentUser.phone}</p>
     `;
 }
@@ -285,7 +331,7 @@ function renderAdminPanel() {
         <button onclick="assignAdmin()">Назначить</button>
     `;
 
-    document.getElementById("create-order-form").addEventListener("submit", (e) => {
+    document.getElementById("create-order-form").addEventListener("submit", async (e) => {
         e.preventDefault();
         const title = document.getElementById("order-title").value;
         const description = document.getElementById("order-description").value;
@@ -295,26 +341,32 @@ function renderAdminPanel() {
         if (!photoFile) return alert("Загрузите фотографию!");
 
         const reader = new FileReader();
-        reader.onload = (event) => {
+        reader.onload = async (event) => {
             const photo = event.target.result;
 
             const newOrder = {
-                id: Date.now().toString(),
                 title,
                 description,
                 address,
                 photo,
                 status: "active",
-                bids: {},
-                createdAt: Date.now(),
-                winnerId: null,
+                created_at: new Date().toISOString(),
+                winner_id: null,
             };
 
-            // Сохраняем заказ в Firebase
-            set(ref(database, `orders/${newOrder.id}`), newOrder);
+            // Сохраняем заказ в Supabase
+            const { data, error } = await supabase
+                .from("orders")
+                .insert([newOrder]);
+
+            if (error) {
+                console.error("Ошибка при создании заказа:", error);
+                alert("Произошла ошибка при создании заказа.");
+                return;
+            }
 
             // Запуск таймера на 1 час
-            startAuctionTimer(newOrder.id);
+            startAuctionTimer(data[0].id);
 
             alert("Заказ успешно создан!");
         };
@@ -340,7 +392,7 @@ function renderBottomMenu() {
         bottomMenu.appendChild(button);
     });
 
-    if (currentUser && currentUser.isAdmin) {
+    if (currentUser && currentUser.is_admin) {
         const adminButton = document.createElement("button");
         adminButton.innerHTML = `<i class="fas fa-cog"></i><span>Админ</span>`;
         adminButton.onclick = () => showSection("admin");
