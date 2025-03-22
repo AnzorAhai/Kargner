@@ -8,175 +8,216 @@ const firebaseConfig = {
     appId: "1:742154397087:web:bc12af179060e59f7fc9aa",
     measurementId: "G-PY5EQK170H"
   };
-  
-  
-  
 
-// Инициализация Firebase
-const app = firebase.initializeApp(firebaseConfig);
-const database = firebase.database();
+  // Инициализация Firebase
+  const app = firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
 
-let currentUser = null; // Текущий пользователь
+  // Инициализация Telegram Web App
+  const tg = window.Telegram.WebApp;
+  tg.MainButton.show();
+  tg.MainButton.setText("Закрыть");
+  tg.MainButton.onClick(() => tg.close());
 
-// Инициализация Telegram Web App
-const tg = window.Telegram.WebApp;
+  let currentUser = null; // Текущий пользователь
 
-// Показываем кнопку "Закрыть"
-tg.MainButton.show();
-tg.MainButton.setText("Закрыть");
-tg.MainButton.onClick(() => tg.close());
+  // Получаем данные пользователя из Telegram
+  const user = tg.initDataUnsafe.user;
+  if (user) {
+      currentUser = {
+          id: user.id.toString(),
+          firstName: user.first_name,
+          lastName: user.last_name || "",
+          phone: "", // Телефон не передаётся через Telegram Web App
+      };
+      document.getElementById("registration-section").style.display = "none";
+      showSection("orders-board");
+      renderOrdersBoard();
+  }
 
-// Получаем данные пользователя
-const user = tg.initDataUnsafe.user;
-if (user) {
-    currentUser = {
-        id: user.id.toString(),
-        firstName: user.first_name,
-        lastName: user.last_name || "",
-        phone: "", // Телефон не передаётся через Telegram Web App
-    };
-    document.getElementById("registration-section").style.display = "none";
-    showSection("orders-board");
-    renderOrdersBoard();
-}
+  // Регистрация пользователя
+  document.getElementById("registration-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const firstName = document.getElementById("firstName").value;
+      const lastName = document.getElementById("lastName").value;
+      const phone = document.getElementById("phone").value;
 
-// Регистрация пользователя
-document.getElementById("registration-form").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const firstName = document.getElementById("firstName").value;
-    const lastName = document.getElementById("lastName").value;
-    const phone = document.getElementById("phone").value;
+      const newUser = {
+          id: user ? user.id.toString() : Date.now().toString(), // Используем ID из Telegram, если есть
+          firstName,
+          lastName,
+          phone,
+      };
 
-    const newUser = {
-        id: Date.now().toString(),
-        firstName,
-        lastName,
-        phone,
-    };
+      // Сохраняем пользователя в Firebase
+      database.ref(`users/${newUser.id}`).set(newUser);
+      currentUser = newUser;
 
-    // Сохраняем пользователя в Firebase
-    database.ref(`users/${newUser.id}`).set(newUser);
-    currentUser = newUser;
+      // Скрываем регистрацию и показываем доску заказов
+      document.getElementById("registration-section").style.display = "none";
+      showSection("orders-board");
+      renderOrdersBoard();
+  });
 
-    // Скрываем регистрацию и показываем доску заказов
-    document.getElementById("registration-section").style.display = "none";
-    showSection("orders-board");
-    renderOrdersBoard();
-});
+  // Отображение доски заказов
+  function renderOrdersBoard() {
+      const ordersList = document.getElementById("orders-list");
+      ordersList.innerHTML = "";
 
-// Отображение доски заказов
-function renderOrdersBoard() {
-    const ordersList = document.getElementById("orders-list");
-    ordersList.innerHTML = "";
+      database.ref("orders").on("value", (snapshot) => {
+          const orders = snapshot.val() || {};
+          Object.values(orders).forEach((order) => {
+              const orderCard = document.createElement("div");
+              orderCard.className = "order-card";
+              orderCard.innerHTML = `
+                  <img src="${order.photo}" alt="Фото заказа">
+                  <h3>${order.title}</h3>
+                  <p>Адрес: ${order.address}</p>
+                  <p>Статус: ${order.status === "active" ? "Активен" : "Завершён"}</p>
+              `;
+              orderCard.addEventListener("click", () => showOrderDetails(order.id));
+              ordersList.appendChild(orderCard);
+          });
+      });
+  }
 
-    database.ref("orders").on("value", (snapshot) => {
-        const orders = snapshot.val() || {};
-        Object.values(orders).forEach((order) => {
-            const orderCard = document.createElement("div");
-            orderCard.className = "order-card";
-            orderCard.innerHTML = `
-                <img src="${order.photo}" alt="Фото заказа">
-                <h3>${order.title}</h3>
-                <p>Адрес: ${order.address}</p>
-                <p>Статус: ${order.status === "active" ? "Активен" : "Завершён"}</p>
-            `;
-            orderCard.addEventListener("click", () => showOrderDetails(order.id));
-            ordersList.appendChild(orderCard);
-        });
-    });
-}
+  // Детали заказа
+  function showOrderDetails(orderId) {
+      database.ref(`orders/${orderId}`).once("value", (snapshot) => {
+          const order = snapshot.val();
+          const orderContent = document.getElementById("order-content");
+          orderContent.innerHTML = `
+              <img src="${order.photo}" alt="Фото заказа" style="width: 100%;">
+              <p>Адрес: ${order.address}</p>
+              <p>Описание: ${order.description}</p>
+              <div id="bids-list"></div>
+              <input type="number" id="bid-amount" placeholder="Ваша ставка">
+              <button onclick="placeBid('${orderId}')">Сделать ставку</button>
+          `;
+          renderBids(orderId);
+          showSection("order-details");
+      });
+  }
 
-// Детали заказа
-function showOrderDetails(orderId) {
-    database.ref(`orders/${orderId}`).once("value", (snapshot) => {
-        const order = snapshot.val();
-        const orderContent = document.getElementById("order-content");
-        orderContent.innerHTML = `
-            <img src="${order.photo}" alt="Фото заказа" style="width: 100%;">
-            <p>Адрес: ${order.address}</p>
-            <p>Описание: ${order.description}</p>
-            <div id="bids-list"></div>
-            <input type="number" id="bid-amount" placeholder="Ваша ставка">
-            <button onclick="placeBid('${orderId}')">Сделать ставку</button>
-        `;
-        renderBids(orderId);
-        showSection("order-details");
-    });
-}
+  // Ставки
+  function placeBid(orderId) {
+      const amount = parseFloat(document.getElementById("bid-amount").value);
+      if (!amount) return alert("Введите сумму ставки!");
 
-// Ставки
-function placeBid(orderId) {
-    const amount = parseFloat(document.getElementById("bid-amount").value);
-    if (!amount) return alert("Введите сумму ставки!");
+      const bid = {
+          userId: currentUser.id,
+          amount,
+          timestamp: Date.now(),
+      };
 
-    const bid = {
-        userId: currentUser.id,
-        amount,
-        timestamp: Date.now(),
-    };
+      database.ref(`orders/${orderId}/bids`).push(bid);
+  }
 
-    database.ref(`orders/${orderId}/bids`).push(bid);
-}
+  // Отображение ставок
+  function renderBids(orderId) {
+      const bidsList = document.getElementById("bids-list");
+      bidsList.innerHTML = "";
 
-// Отображение ставок
-function renderBids(orderId) {
-    const bidsList = document.getElementById("bids-list");
-    bidsList.innerHTML = "";
+      database.ref(`orders/${orderId}/bids`).on("value", (snapshot) => {
+          const bids = snapshot.val() || {};
+          Object.values(bids).forEach((bid) => {
+              const bidElement = document.createElement("p");
+              bidElement.textContent = `Ставка: ${bid.amount} руб.`;
+              bidsList.appendChild(bidElement);
+          });
+      });
+  }
 
-    database.ref(`orders/${orderId}/bids`).on("value", (snapshot) => {
-        const bids = snapshot.val() || {};
-        Object.values(bids).forEach((bid) => {
-            const bidElement = document.createElement("p");
-            bidElement.textContent = `Ставка: ${bid.amount} руб.`;
-            bidsList.appendChild(bidElement);
-        });
-    });
-}
+  // Завершение аукциона через 1 час
+  function startAuctionTimer(orderId) {
+      setTimeout(() => {
+          database.ref(`orders/${orderId}`).once("value", (snapshot) => {
+              const order = snapshot.val();
+              if (!order || order.status !== "active") return;
 
-// Навигация
-function showSection(sectionId) {
-    document.querySelectorAll(".container > div").forEach((div) => {
-        div.style.display = "none";
-    });
-    document.getElementById(sectionId).style.display = "block";
+              if (order.bids && Object.keys(order.bids).length > 0) {
+                  // Находим минимальную ставку
+                  const winningBid = Object.values(order.bids).reduce((min, bid) => (bid.amount < min.amount ? bid : min));
+                  database.ref(`orders/${orderId}/winnerId`).set(winningBid.userId);
 
-    if (sectionId === "my-orders") renderMyOrders();
-    if (sectionId === "profile") renderProfile();
-}
+                  // Уведомляем победителя
+                  notifyWinner(winningBid.userId, order);
+              }
 
-function goBack() {
-    showSection("orders-board");
-}
+              database.ref(`orders/${orderId}/status`).set("completed");
+          });
+      }, 3600000); // 1 час = 3600000 мс
+  }
 
-// Раздел "Мои заказы"
-function renderMyOrders() {
-    const myOrdersList = document.getElementById("my-orders-list");
-    myOrdersList.innerHTML = "";
+  // Уведомление победителя
+  function notifyWinner(userId, order) {
+      const message = `🎉 Поздравляем! Вы выиграли заказ "${order.title}".`;
+      sendNotification(userId, message);
 
-    database.ref("orders").on("value", (snapshot) => {
-        const orders = snapshot.val() || {};
-        Object.values(orders).forEach((order) => {
-            if (order.winnerId === currentUser.id) {
-                const orderCard = document.createElement("div");
-                orderCard.className = "order-card";
-                orderCard.innerHTML = `
-                    <img src="${order.photo}" alt="Фото заказа">
-                    <h3>${order.title}</h3>
-                    <p>Адрес: ${order.address}</p>
-                    <p>Описание: ${order.description}</p>
-                `;
-                myOrdersList.appendChild(orderCard);
-            }
-        });
-    });
-}
+      // Всплывающее уведомление в интерфейсе
+      if (currentUser && currentUser.id === userId) {
+          alert(message);
+      }
+  }
 
-// Раздел "Мой профиль"
-function renderProfile() {
-    const profileInfo = document.getElementById("profile-info");
-    profileInfo.innerHTML = `
-        <p>Имя: ${currentUser.firstName}</p>
-        <p>Фамилия: ${currentUser.lastName}</p>
-        <p>Телефон: ${currentUser.phone}</p>
-    `;
-}
+  // Отправка уведомления через Telegram Bot API
+  function sendNotification(userId, message) {
+      const botToken = "ВАШ_BOT_TOKEN";
+      const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+      fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+              chat_id: userId,
+              text: message,
+          }),
+      });
+  }
+
+  // Навигация
+  function showSection(sectionId) {
+      document.querySelectorAll(".container > div").forEach((div) => {
+          div.style.display = "none";
+      });
+      document.getElementById(sectionId).style.display = "block";
+
+      if (sectionId === "my-orders") renderMyOrders();
+      if (sectionId === "profile") renderProfile();
+  }
+
+  function goBack() {
+      showSection("orders-board");
+  }
+
+  // Раздел "Мои заказы"
+  function renderMyOrders() {
+      const myOrdersList = document.getElementById("my-orders-list");
+      myOrdersList.innerHTML = "";
+
+      database.ref("orders").on("value", (snapshot) => {
+          const orders = snapshot.val() || {};
+          Object.values(orders).forEach((order) => {
+              if (order.winnerId === currentUser.id) {
+                  const orderCard = document.createElement("div");
+                  orderCard.className = "order-card";
+                  orderCard.innerHTML = `
+                      <img src="${order.photo}" alt="Фото заказа">
+                      <h3>${order.title}</h3>
+                      <p>Адрес: ${order.address}</p>
+                      <p>Описание: ${order.description}</p>
+                  `;
+                  myOrdersList.appendChild(orderCard);
+              }
+          });
+      });
+  }
+
+  // Раздел "Мой профиль"
+  function renderProfile() {
+      const profileInfo = document.getElementById("profile-info");
+      profileInfo.innerHTML = `
+          <p>Имя: ${currentUser.firstName}</p>
+          <p>Фамилия: ${currentUser.lastName}</p>
+          <p>Телефон: ${currentUser.phone}</p>
+      `;
+  }
