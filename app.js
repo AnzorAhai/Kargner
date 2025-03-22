@@ -1,18 +1,22 @@
+// Импорт Firebase
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
+
 // Конфигурация Firebase
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyC03jHJLUTcHnWhkWwwFBtR_L4So9sXWl0",
-  authDomain: "kargner-5c462.firebaseapp.com",
-  projectId: "kargner-5c462",
-  storageBucket: "kargner-5c462.firebasestorage.app",
-  messagingSenderId: "742154397087",
-  appId: "1:742154397087:web:bc12af179060e59f7fc9aa",
-  measurementId: "G-PY5EQK170H"
+    apiKey: "AIzaSyC03jHJLUTcHnWhkWwwFBtR_L4So9sXWl0",
+    authDomain: "kargner-5c462.firebaseapp.com",
+    databaseURL: "https://kargner-5c462-default-rtdb.firebaseio.com",
+    projectId: "kargner-5c462",
+    storageBucket: "kargner-5c462.firebasestorage.app",
+    messagingSenderId: "742154397087",
+    appId: "1:742154397087:web:bc12af179060e59f7fc9aa",
+    measurementId: "G-PY5EQK170H"
 };
 
 // Инициализация Firebase
-const app = firebase.initializeApp(firebaseConfig);
-const database = firebase.database();
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
 
 // Инициализация Telegram Web App
 const tg = window.Telegram.WebApp;
@@ -25,7 +29,7 @@ let currentUser = null; // Текущий пользователь
 // Проверка, является ли пользователь администратором
 function isAdmin(userId) {
     return new Promise((resolve) => {
-        database.ref(`admins/${userId}`).once("value", (snapshot) => {
+        onValue(ref(database, `admins/${userId}`), (snapshot) => {
             resolve(snapshot.exists());
         });
     });
@@ -70,7 +74,7 @@ document.getElementById("registration-form").addEventListener("submit", (e) => {
     };
 
     // Сохраняем пользователя в Firebase
-    database.ref(`users/${newUser.id}`).set(newUser);
+    set(ref(database, `users/${newUser.id}`), newUser);
     currentUser = newUser;
 
     // Скрываем регистрацию и показываем доску заказов
@@ -85,7 +89,7 @@ function renderOrdersBoard() {
     const ordersList = document.getElementById("orders-list");
     ordersList.innerHTML = "";
 
-    database.ref("orders").on("value", (snapshot) => {
+    onValue(ref(database, "orders"), (snapshot) => {
         const orders = snapshot.val() || {};
         Object.values(orders).forEach((order) => {
             const orderCard = document.createElement("div");
@@ -104,7 +108,7 @@ function renderOrdersBoard() {
 
 // Детали заказа
 function showOrderDetails(orderId) {
-    database.ref(`orders/${orderId}`).once("value", (snapshot) => {
+    onValue(ref(database, `orders/${orderId}`), (snapshot) => {
         const order = snapshot.val();
         const orderContent = document.getElementById("order-content");
         orderContent.innerHTML = `
@@ -131,7 +135,7 @@ function placeBid(orderId) {
         timestamp: Date.now(),
     };
 
-    database.ref(`orders/${orderId}/bids`).push(bid);
+    set(ref(database, `orders/${orderId}/bids/${Date.now()}`), bid);
 }
 
 // Отображение ставок
@@ -139,7 +143,7 @@ function renderBids(orderId) {
     const bidsList = document.getElementById("bids-list");
     bidsList.innerHTML = "";
 
-    database.ref(`orders/${orderId}/bids`).on("value", (snapshot) => {
+    onValue(ref(database, `orders/${orderId}/bids`), (snapshot) => {
         const bids = snapshot.val() || {};
         Object.values(bids).forEach((bid) => {
             const bidElement = document.createElement("p");
@@ -152,20 +156,20 @@ function renderBids(orderId) {
 // Завершение аукциона через 1 час
 function startAuctionTimer(orderId) {
     setTimeout(() => {
-        database.ref(`orders/${orderId}`).once("value", (snapshot) => {
+        onValue(ref(database, `orders/${orderId}`), (snapshot) => {
             const order = snapshot.val();
             if (!order || order.status !== "active") return;
 
             if (order.bids && Object.keys(order.bids).length > 0) {
                 // Находим минимальную ставку
                 const winningBid = Object.values(order.bids).reduce((min, bid) => (bid.amount < min.amount ? bid : min));
-                database.ref(`orders/${orderId}/winnerId`).set(winningBid.userId);
+                set(ref(database, `orders/${orderId}/winnerId`), winningBid.userId);
 
                 // Уведомляем победителя
                 notifyWinner(winningBid.userId, order);
             }
 
-            database.ref(`orders/${orderId}/status`).set("completed");
+            set(ref(database, `orders/${orderId}/status`), "completed");
         });
     }, 3600000); // 1 час = 3600000 мс
 }
@@ -183,7 +187,7 @@ function notifyWinner(userId, order) {
 
 // Отправка уведомления через Telegram Bot API
 function sendNotification(userId, message) {
-    const botToken = "ВАШ_BOT_TOKEN";
+    const botToken = "8030616864:AAHYDXWyKIXcJ4gb-Y6PpxndYLBZIKtz6_4";
     const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
     fetch(url, {
         method: "POST",
@@ -201,7 +205,7 @@ function assignAdmin() {
     if (!adminId) return alert("Введите Telegram ID!");
 
     // Добавляем ID в список администраторов
-    database.ref(`admins/${adminId}`).set(true)
+    set(ref(database, `admins/${adminId}`), true)
         .then(() => {
             alert("Администратор назначен!");
         })
@@ -237,7 +241,7 @@ function renderMyOrders() {
     const myOrdersList = document.getElementById("my-orders-list");
     myOrdersList.innerHTML = "";
 
-    database.ref("orders").on("value", (snapshot) => {
+    onValue(ref(database, "orders"), (snapshot) => {
         const orders = snapshot.val() || {};
         Object.values(orders).forEach((order) => {
             if (order.winnerId === currentUser.id) {
@@ -308,7 +312,7 @@ function renderAdminPanel() {
             };
 
             // Сохраняем заказ в Firebase
-            database.ref(`orders/${newOrder.id}`).set(newOrder);
+            set(ref(database, `orders/${newOrder.id}`), newOrder);
 
             // Запуск таймера на 1 час
             startAuctionTimer(newOrder.id);
