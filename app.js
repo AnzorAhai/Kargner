@@ -1,6 +1,6 @@
 // Инициализация Supabase
-const supabaseUrl = "ВАШ_SUPABASE_URL";
-const supabaseKey = "ВАШ_SUPABASE_KEY";
+const supabaseUrl = "https://ycsxkmrroywcyvamfvoz.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inljc3hrbXJyb3l3Y3l2YW1mdm96Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2MjUzMzYsImV4cCI6MjA1ODIwMTMzNn0._XpzVMDhYF3tLjqoC72_2kOZ5baTE3OeOIZyyuonK2s";
 const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
 // Инициализация Telegram Web App
@@ -225,7 +225,7 @@ function notifyWinner(userId, order) {
 
 // Отправка уведомления через Telegram Bot API
 function sendNotification(userId, message) {
-    const botToken = "ВАШ_BOT_TOKEN";
+    const botToken = "8030616864:AAHYDXWyKIXcJ4gb-Y6PpxndYLBZIKtz6_4";
     const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
     fetch(url, {
         method: "POST",
