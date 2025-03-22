@@ -5,12 +5,6 @@ const supabaseUrl = 'https://ycsxkmrroywcyvamfvoz.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inljc3hrbXJyb3l3Y3l2YW1mdm96Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2MjUzMzYsImV4cCI6MjA1ODIwMTMzNn0._XpzVMDhYF3tLjqoC72_2kOZ5baTE3OeOIZyyuonK2s';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Инициализация Telegram Web App
-const tg = window.Telegram.WebApp;
-tg.MainButton.show();
-tg.MainButton.setText("Закрыть");
-tg.MainButton.onClick(() => tg.close());
-
 let currentUser = null; // Текущий пользователь
 
 // Проверка, является ли пользователь администратором
@@ -34,16 +28,6 @@ function showRegisterForm() {
     document.getElementById('register-form').style.display = 'block';
     document.getElementById('login-form').style.display = 'none';
 }
-
-window.showLoginForm = function() {
-    document.getElementById('login-form').style.display = 'block';
-    document.getElementById('register-form').style.display = 'none';
-};
-
-window.showRegisterForm = function() {
-    document.getElementById('register-form').style.display = 'block';
-    document.getElementById('login-form').style.display = 'none';
-};
 
 // Вход пользователя
 document.getElementById('login-form').addEventListener('submit', async (e) => {
@@ -81,7 +65,7 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
         .single();
 
     if (error) {
-        alert('Ошибка при регистрации.');
+        alert('Ошибка при регистрации: ' + error.message);
         return;
     }
 
@@ -101,6 +85,42 @@ function showMainSections() {
 
     renderOrdersBoard();
     renderBottomMenu();
+}
+
+// Инициализация Telegram Web App
+const tg = window.Telegram.WebApp;
+tg.MainButton.show();
+tg.MainButton.setText("Закрыть");
+tg.MainButton.onClick(() => tg.close());
+
+// Проверка, зашёл ли пользователь через Telegram
+if (tg.initDataUnsafe.user) {
+    // Пользователь зашёл через Telegram
+    const user = tg.initDataUnsafe.user;
+
+    // Автоматическая авторизация через Telegram
+    isAdmin(user.id.toString()).then((isAdmin) => {
+        currentUser = {
+            id: user.id.toString(),
+            firstName: user.first_name,
+            lastName: user.last_name || "",
+            phone: "", // Телефон не передаётся через Telegram Web App
+            isAdmin: isAdmin, // Указываем, является ли админом
+        };
+        showMainSections();
+    });
+} else {
+    // Пользователь зашёл не через Telegram
+    document.getElementById('auth-section').style.display = 'block';
+
+    // Добавь обработчики событий для кнопок
+    document.getElementById('login-button').addEventListener('click', () => {
+        showLoginForm();
+    });
+
+    document.getElementById('register-button').addEventListener('click', () => {
+        showRegisterForm();
+    });
 }
 
 // Отображение доски заказов

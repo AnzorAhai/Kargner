@@ -11,12 +11,12 @@
 </head>
 <body>
     <div class="container">
-        <!-- Страница авторизации -->
+        <!-- Формы авторизации (показываются, если пользователь не из Telegram) -->
         <div id="auth-section">
             <h2>Авторизация</h2>
             <div id="auth-buttons">
-                <button onclick="showLoginForm()">Вход</button>
-                <button onclick="showRegisterForm()">Регистрация</button>
+                <button id="login-button">Вход</button>
+                <button id="register-button">Регистрация</button>
             </div>
 
             <!-- Форма входа -->
@@ -35,67 +35,10 @@
             </form>
         </div>
 
-        <!-- Остальные разделы (будут скрыты до авторизации) -->
+        <!-- Основные разделы (показываются после авторизации) -->
         <div id="main-sections" style="display: none;">
-            <!-- Доска заказов -->
-            <div id="orders-board">
-                <h2>Доска заказов</h2>
-                <div id="orders-list"></div>
-            </div>
-
-            <!-- Детали заказа -->
-            <div id="order-details" style="display: none;">
-                <button onclick="goBack()">← Назад</button>
-                <div id="order-content"></div>
-            </div>
-
-            <!-- Мои заказы -->
-            <div id="my-orders">
-                <h2>Мои заказы</h2>
-                <div id="my-orders-list"></div>
-            </div>
-
-            <!-- Мой профиль -->
-            <div id="profile">
-                <h2>Мой профиль</h2>
-                <div id="profile-info"></div>
-            </div>
-
-            <!-- Кабинет администратора -->
-            <div id="admin" style="display: none;">
-                <h2>Кабинет администратора</h2>
-                <form id="create-order-form">
-                    <input type="text" id="order-title" placeholder="Название заказа" required>
-                    <textarea id="order-description" placeholder="Описание заказа" required></textarea>
-                    <input type="text" id="order-address" placeholder="Адрес" required>
-                    <input type="file" id="order-photo" accept="image/*" required>
-                    <button type="submit">Создать заказ</button>
-                </form>
-                <h3>Назначить администратора</h3>
-                <input type="text" id="admin-id" placeholder="Введите Telegram ID">
-                <button onclick="assignAdmin()">Назначить</button>
-            </div>
+            <!-- Доска заказов, профиль, кабинет администратора и т.д. -->
         </div>
-    </div>
-
-    <!-- Меню снизу -->
-    <div class="bottom-menu" style="display: none;">
-        <button onclick="showSection('orders-board')">
-            <i class="fas fa-home"></i>
-            <span>Заказы</span>
-        </button>
-        <button onclick="showSection('my-orders')">
-            <i class="fas fa-tasks"></i>
-            <span>Мои заказы</span>
-        </button>
-        <button onclick="showSection('profile')">
-            <i class="fas fa-user"></i>
-            <span>Профиль</span>
-        </button>
-        <button id="admin-button" style="display: none;" onclick="showSection('admin')">
-            <i class="fas fa-cog"></i>
-            <span>Админ</span>
-        </button>
     </div>
 
     <!-- Подключите app.js как модуль -->
