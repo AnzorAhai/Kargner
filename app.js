@@ -35,6 +35,15 @@ function showRegisterForm() {
     document.getElementById('login-form').style.display = 'none';
 }
 
+// Добавь обработчики событий для кнопок
+document.getElementById('login-button').addEventListener('click', () => {
+    showLoginForm();
+});
+
+document.getElementById('register-button').addEventListener('click', () => {
+    showRegisterForm();
+});
+
 // Вход пользователя
 document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
