@@ -8,12 +8,37 @@ const firebaseConfig = {
     appId: "1:742154397087:web:bc12af179060e59f7fc9aa",
     measurementId: "G-PY5EQK170H"
   };
+  
+  
+  
 
 // Инициализация Firebase
 const app = firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
 let currentUser = null; // Текущий пользователь
+
+// Инициализация Telegram Web App
+const tg = window.Telegram.WebApp;
+
+// Показываем кнопку "Закрыть"
+tg.MainButton.show();
+tg.MainButton.setText("Закрыть");
+tg.MainButton.onClick(() => tg.close());
+
+// Получаем данные пользователя
+const user = tg.initDataUnsafe.user;
+if (user) {
+    currentUser = {
+        id: user.id.toString(),
+        firstName: user.first_name,
+        lastName: user.last_name || "",
+        phone: "", // Телефон не передаётся через Telegram Web App
+    };
+    document.getElementById("registration-section").style.display = "none";
+    showSection("orders-board");
+    renderOrdersBoard();
+}
 
 // Регистрация пользователя
 document.getElementById("registration-form").addEventListener("submit", (e) => {
