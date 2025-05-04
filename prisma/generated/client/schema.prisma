@@ -1,0 +1,108 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+  output          = "./generated/client"
+  enableTracing   = false
+  dataModel       = "prisma/schema.prisma"
+  logLevel        = "info"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String?        @unique
+  phone         String         @unique
+  password      String
+  firstName     String
+  lastName      String
+  role          Role           @default(MASTER)
+  bio           String? // Краткое описание мастера
+  avatarUrl     String? // URL аватара
+  portfolio     String[] // Массив URL фотографий работ
+  rating        Float          @default(0) // Средний рейтинг
+  ratingCount   Int            @default(0) // Количество оценок
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  announcements Announcement[]
+  orders        Order[]
+  bids          Bid[]
+  reviews       Review[] // Отзывы о мастере
+  reviewsGiven  Review[]       @relation("Reviewer") // Отзывы, оставленные пользователем
+}
+
+model Announcement {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  address     String
+  price       Float
+  status      Status   @default(ACTIVE)
+  imageUrl    String? // Делаем поле необязательным
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  bids        Bid[]
+  orders      Order[]
+
+  @@index([userId])
+}
+
+model Bid {
+  id             String       @id @default(cuid())
+  price          Float
+  description    String?
+  status         Status       @default(PENDING)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  userId         String
+  announcementId String
+  user           User         @relation(fields: [userId], references: [id])
+  announcement   Announcement @relation(fields: [announcementId], references: [id])
+  order          Order?
+}
+
+model Order {
+  id             String       @id @default(cuid())
+  status         Status       @default(PENDING)
+  commission     Float
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  userId         String
+  announcementId String
+  bidId          String       @unique
+  user           User         @relation(fields: [userId], references: [id])
+  announcement   Announcement @relation(fields: [announcementId], references: [id])
+  bid            Bid          @relation(fields: [bidId], references: [id])
+  review         Review?
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  rating     Int // Оценка от 1 до 5
+  comment    String? // Текст отзыва
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  userId     String // ID мастера
+  reviewerId String // ID оставившего отзыв
+  user       User     @relation(fields: [userId], references: [id])
+  reviewer   User     @relation("Reviewer", fields: [reviewerId], references: [id])
+  order      Order    @relation(fields: [orderId], references: [id])
+  orderId    String   @unique
+}
+
+enum Role {
+  MASTER
+  INTERMEDIARY
+}
+
+enum Status {
+  PENDING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}

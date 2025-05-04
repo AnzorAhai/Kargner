@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String?   @unique
+  phone         String    @unique
+  password      String
+  firstName     String
+  lastName      String
+  role          Role      @default(MASTER)
+  bio           String?   // Краткое описание мастера
+  avatarUrl     String?   // URL аватара
+  portfolio     String[]  // Массив URL фотографий работ
+  rating        Float     @default(0) // Средний рейтинг
+  ratingCount   Int       @default(0) // Количество оценок
+  balance       Float     @default(0) // Баланс пользователя в кошельке
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  announcements Announcement[]
+  mediatorOrders Order[] @relation("MediatorOrders")
+  masterOrders   Order[] @relation("MasterOrders")
+  pushSubscriptions PushSubscription[]
+  bids          Bid[]
+  reviews       Review[]  // Отзывы о мастере
+  reviewsGiven  Review[] @relation("Reviewer") // Отзывы, оставленные пользователем
+}
+
+model Announcement {
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  address     String
+  price       Float
+  status      Status    @default(ACTIVE)
+  imageUrl    String?   // Делаем поле необязательным
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  bids        Bid[]
+  orders      Order[]
+
+  @@index([userId])
+}
+
+model Bid {
+  id            String    @id @default(cuid())
+  price         Float
+  description   String?
+  status        Status    @default(PENDING)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  userId        String
+  announcementId String
+  user          User      @relation(fields: [userId], references: [id])
+  announcement  Announcement @relation(fields: [announcementId], references: [id])
+  order         Order?
+}
+
+model Order {
+  id            String    @id @default(cuid())
+  status        Status    @default(PENDING)
+  commission    Float
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  mediatorId    String    // посредник (автор заказа)
+  masterId      String?   // мастер (исполнитель) после выдачи заказа
+  announcementId String
+  bidId         String    @unique
+  mediator      User      @relation("MediatorOrders", fields: [mediatorId], references: [id])
+  master        User?     @relation("MasterOrders", fields: [masterId], references: [id])
+  announcement  Announcement @relation(fields: [announcementId], references: [id])
+  bid           Bid       @relation(fields: [bidId], references: [id])
+  review        Review?
+}
+
+model Review {
+  id          String    @id @default(cuid())
+  rating      Int       // Оценка от 1 до 5
+  comment     String?   // Текст отзыва
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  userId      String    // ID мастера
+  reviewerId  String    // ID оставившего отзыв
+  user        User      @relation(fields: [userId], references: [id])
+  reviewer    User      @relation("Reviewer", fields: [reviewerId], references: [id])
+  order       Order     @relation(fields: [orderId], references: [id])
+  orderId     String    @unique
+}
+
+enum Role {
+  MASTER
+  INTERMEDIARY
+}
+
+enum Status {
+  PENDING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+// Push subscription storage for PWA notifications
+model PushSubscription {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  endpoint   String
+  keys       Json     // object with p256dh and auth keys
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+} 

@@ -1,0 +1,6 @@
+.vercel
+
+# dependencies and build outputs
+node_modules/
+.next/
+.env
