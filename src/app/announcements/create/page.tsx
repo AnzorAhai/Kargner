@@ -57,32 +57,19 @@ export default function CreateAnnouncementPage() {
   };
 
   const handleImageUpload = async (file: File) => {
-    try {
-      // Compress the image before upload
-      const options = { maxSizeMB: 1, maxWidthOrHeight: 1920 };
-      const compressedFile = await imageCompression(file, options);
-      // Upload to Supabase Storage
-      const fileName = `${Date.now()}_${compressedFile.name}`;
-      const { data: uploadData, error: uploadError } = await supabase
-        .storage
-        .from('images')
-        .upload(fileName, compressedFile, { cacheControl: '3600', upsert: false });
-      if (uploadError || !uploadData) {
-        console.error('Supabase upload error:', uploadError);
-        console.error('Full Supabase error object:', JSON.stringify(uploadError, null, 2));
-        throw new Error(uploadError?.message || 'Не удалось загрузить изображение');
-      }
-      const { data } = supabase.storage.from('images').getPublicUrl(uploadData.path);
-      const publicUrl = data.publicUrl;
-      if (!publicUrl) {
-        console.error('Supabase getPublicUrl error, no URL returned', data);
-        throw new Error('Не удалось получить URL изображения');
-      }
-      return publicUrl;
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      throw error;
+    // Compress the image before upload
+    const options = { maxSizeMB: 1, maxWidthOrHeight: 1920 };
+    const compressedFile = await imageCompression(file, options);
+    // Upload via server-side API (uses Supabase service role key internally)
+    const formData = new FormData();
+    formData.append('file', compressedFile, compressedFile.name);
+    const response = await fetch('/api/upload', { method: 'POST', body: formData });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Ошибка при загрузке изображения');
     }
+    const data = await response.json();
+    return data.imageUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
