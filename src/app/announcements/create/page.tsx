@@ -68,8 +68,9 @@ export default function CreateAnnouncementPage() {
         .from('images')
         .upload(fileName, compressedFile, { cacheControl: '3600', upsert: false });
       if (uploadError || !uploadData) {
-        console.error('Supabase upload error', uploadError);
-        throw new Error('Не удалось загрузить изображение');
+        console.error('Supabase upload error:', uploadError);
+        console.error('Full Supabase error object:', JSON.stringify(uploadError, null, 2));
+        throw new Error(uploadError?.message || 'Не удалось загрузить изображение');
       }
       const { data } = supabase.storage.from('images').getPublicUrl(uploadData.path);
       const publicUrl = data.publicUrl;
