@@ -6,6 +6,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '@/components/auth-provider';
 import BottomNav from '@/components/BottomNav';
 import PWAInstall from '@/components/PWAInstall';
+import PushSubscribe from '@/components/PushSubscribe';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -35,6 +36,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
+            <PushSubscribe />
             {children}
             <PWAInstall />
             <Toaster position="bottom-right" />

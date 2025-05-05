@@ -35,23 +35,27 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
   const [assigningBidId, setAssigningBidId] = useState<string | null>(null);
   const [assignedMaster, setAssignedMaster] = useState<{ id: string; name: string } | null>(null);
 
-  useEffect(() => {
-    const fetchAnnouncement = async () => {
-      try {
-        const response = await fetch(`/api/announcements/${params.id}`);
-        if (!response.ok) {
-          throw new Error('Ошибка при загрузке объявления');
-        }
-        const data = await response.json();
-        setAnnouncement(data);
-      } catch (err) {
-        setError('Не удалось загрузить объявление');
-        console.error(err);
-      } finally {
-        setLoading(false);
+  const fetchAnnouncement = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/announcements/${params.id}`);
+      if (!response.ok) {
+        throw new Error('Ошибка при загрузке объявления');
       }
-    };
+      const data = await response.json();
+      console.log('Fetched announcement:', data);
+      console.log('Session user id:', session?.user?.id);
+      console.log('Bids array:', data.bids);
+      setAnnouncement(data);
+    } catch (err) {
+      setError('Не удалось загрузить объявление');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchAnnouncement();
 
     // Слушаем push-сообщения для обновления списка ставок
@@ -209,6 +213,15 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
         {/* Блок для автора объявления: список всех ставок */}
         {session?.user?.id === announcement?.user.id && (
           <div className="px-4 py-6 sm:px-0">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">Список мастеров</h2>
+              <button
+                onClick={fetchAnnouncement}
+                className="text-sm text-blue-600 hover:underline"
+              >
+                Обновить ставки
+              </button>
+            </div>
             {/* Если мастер назначен, показываем сообщение и кнопку отмены */}
             {assignedMaster ? (
               <div className="flex items-center justify-between bg-green-100 p-4 rounded-lg">
@@ -229,7 +242,6 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
               </div>
             ) : (
               <div className="bg-white shadow-lg rounded-lg p-6">
-                <h2 className="text-xl font-semibold mb-4 text-gray-900">Список мастеров</h2>
                 {announcement.bids.length > 0 ? (
                   <div className="space-y-4">
                     {announcement.bids
