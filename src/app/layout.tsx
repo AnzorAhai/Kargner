@@ -12,6 +12,12 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Kargner - Платформа для мастеров и заказчиков',
   description: 'Найдите мастеров для выполнения любых работ или разместите свое объявление',
+  manifest: '/manifest.json',
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/icons/icon-192x192.png',
+  },
 };
 
 export default function RootLayout({
