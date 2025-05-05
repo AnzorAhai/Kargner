@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import imageCompression from 'browser-image-compression';
 
 interface AnnouncementFormData {
   title: string;
@@ -56,20 +57,24 @@ export default function CreateAnnouncementPage() {
 
   const handleImageUpload = async (file: File) => {
     try {
+      // Compress the image before upload
+      const options = { maxSizeMB: 1, maxWidthOrHeight: 1920 };
+      const compressedFile = await imageCompression(file, options);
       const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch('/api/upload', {
+      formData.append('file', compressedFile, compressedFile.name);
+      // Direct upload to Cloudinary (unsigned preset)
+      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!;
+      const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!;
+      formData.append('upload_preset', uploadPreset);
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, {
         method: 'POST',
         body: formData,
       });
-
-      if (!response.ok) {
+      if (!res.ok) {
         throw new Error('Ошибка при загрузке изображения');
       }
-
-      const data = await response.json();
-      return data.imageUrl;
+      const data = await res.json();
+      return data.secure_url;
     } catch (error) {
       console.error('Error uploading image:', error);
       throw error;

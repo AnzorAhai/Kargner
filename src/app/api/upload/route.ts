@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { writeFile } from 'fs/promises';
-import { join } from 'path';
+import { Readable } from 'stream';
+import cloudinary from '@/lib/cloudinary';
 
 export async function POST(request: Request) {
   try {
@@ -14,19 +14,20 @@ export async function POST(request: Request) {
       );
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Создаем уникальное имя файла
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
-    const filename = `${uniqueSuffix}-${file.name}`;
-    const path = join(process.cwd(), 'public', 'uploads', filename);
-
-    // Создаем директорию, если она не существует
-    await writeFile(path, buffer);
-
-    // Возвращаем URL для доступа к файлу
-    const imageUrl = `/uploads/${filename}`;
+    // Upload file to Cloudinary
+    const result = await new Promise<any>((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        { folder: 'kargner' },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      Readable.from(buffer).pipe(uploadStream);
+    });
+    const imageUrl = result.secure_url;
     return NextResponse.json({ imageUrl });
   } catch (error) {
     console.error('Error uploading file:', error);
