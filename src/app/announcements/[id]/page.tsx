@@ -53,6 +53,23 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
     };
 
     fetchAnnouncement();
+
+    // Слушаем push-сообщения для обновления списка ставок
+    const handleMessage = (event: any) => {
+      if (event.data?.type === 'NEW_BID') {
+        fetchAnnouncement();
+      }
+    };
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', handleMessage);
+    }
+
+    return () => {
+      // Убираем слушатель сообщений
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', handleMessage);
+      }
+    };
   }, [params.id]);
 
   const handleAssign = async (bid: { id: string; price: number; user: { id: string; firstName: string; lastName: string } }) => {

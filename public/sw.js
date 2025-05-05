@@ -9,7 +9,16 @@ self.addEventListener('push', event => {
     icon: '/icons/icon-192x192.png',
     data: data.url || '/'
   };
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(
+    Promise.all([
+      self.registration.showNotification(title, options),
+      self.clients.matchAll({ includeUncontrolled: true }).then(clients => {
+        clients.forEach(client => {
+          client.postMessage({ type: 'NEW_BID', payload: data });
+        });
+      })
+    ])
+  );
 });
 
 // Notification click event
