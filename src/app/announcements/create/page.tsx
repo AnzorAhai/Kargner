@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import imageCompression from 'browser-image-compression';
+import { supabase } from '@/lib/supabase';
 
 interface AnnouncementFormData {
   title: string;
@@ -60,21 +61,23 @@ export default function CreateAnnouncementPage() {
       // Compress the image before upload
       const options = { maxSizeMB: 1, maxWidthOrHeight: 1920 };
       const compressedFile = await imageCompression(file, options);
-      const formData = new FormData();
-      formData.append('file', compressedFile, compressedFile.name);
-      // Direct upload to Cloudinary (unsigned preset)
-      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!;
-      const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!;
-      formData.append('upload_preset', uploadPreset);
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, {
-        method: 'POST',
-        body: formData,
-      });
-      if (!res.ok) {
-        throw new Error('Ошибка при загрузке изображения');
+      // Upload to Supabase Storage
+      const fileName = `${Date.now()}_${compressedFile.name}`;
+      const { data: uploadData, error: uploadError } = await supabase
+        .storage
+        .from('images')
+        .upload(fileName, compressedFile, { cacheControl: '3600', upsert: false });
+      if (uploadError || !uploadData) {
+        console.error('Supabase upload error', uploadError);
+        throw new Error('Не удалось загрузить изображение');
       }
-      const data = await res.json();
-      return data.secure_url;
+      const { data } = supabase.storage.from('images').getPublicUrl(uploadData.path);
+      const publicUrl = data.publicUrl;
+      if (!publicUrl) {
+        console.error('Supabase getPublicUrl error, no URL returned', data);
+        throw new Error('Не удалось получить URL изображения');
+      }
+      return publicUrl;
     } catch (error) {
       console.error('Error uploading image:', error);
       throw error;
