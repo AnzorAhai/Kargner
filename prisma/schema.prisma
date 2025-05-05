@@ -113,7 +113,7 @@ model PushSubscription {
   id         String   @id @default(cuid())
   userId     String
   user       User     @relation(fields: [userId], references: [id])
-  endpoint   String
+  endpoint   String   @unique
   keys       Json     // object with p256dh and auth keys
   createdAt  DateTime @default(now())
 
