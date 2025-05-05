@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '@/components/auth-provider';
 import BottomNav from '@/components/BottomNav';
+import PWAInstall from '@/components/PWAInstall';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -29,6 +30,7 @@ export default function RootLayout({
         >
           <AuthProvider>
             {children}
+            <PWAInstall />
             <Toaster position="bottom-right" />
             <BottomNav />
           </AuthProvider>
