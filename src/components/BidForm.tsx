@@ -56,6 +56,7 @@ export function BidForm({ announcementId, initialPrice, onSuccess, bidId }: BidF
         const data = await res.json();
         throw new Error(data.error || 'Не удалось поставить цену');
       }
+      const bidData = await res.json();
       // После успешной ставки вызываем колбэк или перезагружаем страницу
       if (onSuccess) {
         onSuccess();

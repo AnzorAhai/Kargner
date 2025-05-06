@@ -40,7 +40,5 @@ export async function GET(
       { error: 'Ошибка при получении объявления' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 } 
