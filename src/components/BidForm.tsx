@@ -7,9 +7,10 @@ interface BidFormProps {
   announcementId: string;
   initialPrice?: number;
   onSuccess?: () => void;
+  bidId?: string;
 }
 
-export function BidForm({ announcementId, initialPrice, onSuccess }: BidFormProps) {
+export function BidForm({ announcementId, initialPrice, onSuccess, bidId }: BidFormProps) {
   const router = useRouter();
   const [price, setPrice] = useState(initialPrice?.toString() || '');
   const [error, setError] = useState('');
@@ -18,8 +19,30 @@ export function BidForm({ announcementId, initialPrice, onSuccess }: BidFormProp
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!price.trim()) {
-      setError('Введите цену');
+    const trimmed = price.trim();
+    // If empty and bidId exists, delete the bid
+    if (!trimmed) {
+      if (bidId) {
+        setLoading(true);
+        try {
+          const res = await fetch('/api/bids', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bidId })
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || 'Не удалось удалить ставку');
+          }
+          if (onSuccess) onSuccess(); else window.location.reload();
+        } catch (err: any) {
+          setError(err.message);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setError('Введите цену');
+      }
       return;
     }
     setLoading(true);

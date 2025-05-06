@@ -209,6 +209,7 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
                   <BidForm
                     announcementId={params.id}
                     initialPrice={myBid?.price}
+                    bidId={myBid?.id}
                     onSuccess={() => {
                       setIsEditingBid(false);
                       fetchAnnouncement();

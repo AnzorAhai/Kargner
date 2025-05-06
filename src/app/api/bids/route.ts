@@ -79,4 +79,30 @@ export async function POST(req: Request) {
   })();
 
   return NextResponse.json(bid);
+}
+
+// Handle bid deletion by its owner (master)
+export async function DELETE(request: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  try {
+    const { bidId } = await request.json();
+    if (!bidId) {
+      return NextResponse.json({ error: 'Missing bidId' }, { status: 400 });
+    }
+    const existing = await prisma.bid.findUnique({ where: { id: bidId } });
+    if (!existing) {
+      return NextResponse.json({ error: 'Bid not found' }, { status: 404 });
+    }
+    if (existing.userId !== session.user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    await prisma.bid.delete({ where: { id: bidId } });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error('Error deleting bid:', err);
+    return NextResponse.json({ error: 'Failed to delete bid' }, { status: 500 });
+  }
 } 
