@@ -35,6 +35,7 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
   const [assigningBidId, setAssigningBidId] = useState<string | null>(null);
   const [publicState, setPublicState] = useState<{ id: string; name: string; orderId: string } | null>(null);
   const [isEditingBid, setIsEditingBid] = useState(false);
+  const [bidsData, setBidsData] = useState<Announcement['bids']>([]);
 
   const fetchAnnouncement = async () => {
     setLoading(true);
@@ -48,6 +49,11 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
       console.log('Session user id:', session?.user?.id);
       console.log('Bids array:', data.bids);
       setAnnouncement(data);
+      const bidsRes = await fetch(`/api/bids?announcementId=${params.id}`, { cache: 'no-store' });
+      if (bidsRes.ok) {
+        const bids = await bidsRes.json();
+        setBidsData(bids);
+      }
     } catch (err) {
       setError('Не удалось загрузить объявление');
       console.error(err);
@@ -202,7 +208,7 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
         {session?.user?.role === 'MASTER' && (
           <div className="px-4 py-6 sm:px-0">
             {(() => {
-              const myBid = announcement?.bids.find(b => b.user.id === session.user.id);
+              const myBid = bidsData.find(b => b.user.id === session.user.id);
               // If no bid yet or currently editing, show BidForm
               if (!myBid || isEditingBid) {
                 return (
@@ -268,9 +274,9 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
               </div>
             ) : (
               <div className="bg-white shadow-lg rounded-lg p-6">
-                {announcement.bids.length > 0 ? (
+                {bidsData.length > 0 ? (
                   <div className="space-y-4">
-                    {announcement.bids
+                    {bidsData
                       .slice()
                       .sort((a, b) => a.price - b.price)
                       .map(bid => (
