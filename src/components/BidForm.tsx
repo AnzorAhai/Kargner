@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 
 interface BidFormProps {
   announcementId: string;
+  initialPrice?: number;
+  onSuccess?: () => void;
 }
 
-export function BidForm({ announcementId }: BidFormProps) {
+export function BidForm({ announcementId, initialPrice, onSuccess }: BidFormProps) {
   const router = useRouter();
-  const [price, setPrice] = useState('');
+  const [price, setPrice] = useState(initialPrice?.toString() || '');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -31,8 +33,12 @@ export function BidForm({ announcementId }: BidFormProps) {
         const data = await res.json();
         throw new Error(data.error || 'Не удалось поставить цену');
       }
-      // Обновляем страницу после успешной ставки
-      window.location.reload();
+      // После успешной ставки вызываем колбэк или перезагружаем страницу
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        window.location.reload();
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {

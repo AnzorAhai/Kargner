@@ -50,11 +50,10 @@ export default function OrderCard({ order, onStatusChange, onPayCommission }: Or
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
       <div className="relative h-48">
-        <Image
+        <img
           src={order.announcement.imageUrl}
           alt={order.announcement.title}
-          fill
-          className="object-cover"
+          className="absolute inset-0 w-full h-full object-cover"
         />
       </div>
       <div className="p-4">

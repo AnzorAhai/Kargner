@@ -33,7 +33,8 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
   const [error, setError] = useState('');
   const router = useRouter();
   const [assigningBidId, setAssigningBidId] = useState<string | null>(null);
-  const [assignedMaster, setAssignedMaster] = useState<{ id: string; name: string; orderId: string } | null>(null);
+  const [publicState, setPublicState] = useState<{ id: string; name: string; orderId: string } | null>(null);
+  const [isEditingBid, setIsEditingBid] = useState(false);
 
   const fetchAnnouncement = async () => {
     setLoading(true);
@@ -89,7 +90,7 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
         throw new Error(data.error || 'Ошибка при назначении заказа');
       }
       const orderData = await res.json();
-      setAssignedMaster({ id: bid.user.id, name: `${bid.user.firstName} ${bid.user.lastName}`, orderId: orderData.id });
+      setPublicState({ id: bid.user.id, name: `${bid.user.firstName} ${bid.user.lastName}`, orderId: orderData.id });
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -202,10 +203,30 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
           <div className="px-4 py-6 sm:px-0">
             {(() => {
               const myBid = announcement?.bids.find(b => b.user.id === session.user.id);
-              return myBid ? (
-                <p className="text-green-600">Вы указали {myBid.price} ₽</p>
-              ) : (
-                <BidForm announcementId={params.id} />
+              // If no bid yet or currently editing, show BidForm
+              if (!myBid || isEditingBid) {
+                return (
+                  <BidForm
+                    announcementId={params.id}
+                    initialPrice={myBid?.price}
+                    onSuccess={() => {
+                      setIsEditingBid(false);
+                      fetchAnnouncement();
+                    }}
+                  />
+                );
+              }
+              // Show current bid with edit button
+              return (
+                <div className="flex items-center space-x-2">
+                  <span className="text-green-600">Вы указали {myBid.price} ₽</span>
+                  <button
+                    onClick={() => setIsEditingBid(true)}
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    Изменить цену?
+                  </button>
+                </div>
               );
             })()}
           </div>
@@ -218,10 +239,10 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
               <h2 className="text-xl font-semibold text-gray-900">Список мастеров</h2>
             </div>
             {/* Если мастер назначен, показываем сообщение и кнопку отмены */}
-            {assignedMaster ? (
+            {publicState ? (
               <div className="flex items-center justify-between bg-green-100 p-4 rounded-lg">
                 <span className="text-green-800 font-medium">
-                  Исполнитель назначен: {assignedMaster.name}
+                  Исполнитель назначен: {publicState.name}
                 </span>
                 <button
                   onClick={async () => {
@@ -229,10 +250,10 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
                       await fetch('/api/orders', {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ orderId: assignedMaster.orderId, status: 'CANCELLED' })
+                        body: JSON.stringify({ orderId: publicState.orderId, status: 'CANCELLED' })
                       });
                       // Сбросить мок-UI и обновить данные
-                      setAssignedMaster(null);
+                      setPublicState(null);
                       fetchAnnouncement();
                     } catch (err: any) {
                       console.error(err);
