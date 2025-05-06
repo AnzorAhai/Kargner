@@ -131,17 +131,24 @@ export async function POST(request: Request) {
     if (!bid) {
       return NextResponse.json({ error: 'Ставка не найдена' }, { status: 404 });
     }
-    // Создать заказ
     const commission = bid.price * 0.1;
-    const order = await prisma.order.create({
-      data: {
-        announcement: { connect: { id: bid.announcementId } },
-        bid: { connect: { id: bid.id } },
-        mediator: { connect: { id: session.user.id } },
-        master: { connect: { id: bid.userId } },
+    // Создаем или обновляем заказ по уникальному bidId (upsert)
+    const order = await prisma.order.upsert({
+      where: { bidId: bid.id },
+      create: {
+        announcementId: bid.announcementId,
+        bidId: bid.id,
+        mediatorId: session.user.id,
+        masterId: bid.userId,
         commission: commission,
-        status: 'PENDING',
+        status: 'PENDING'
       },
+      update: {
+        status: 'PENDING',
+        commission: commission,
+        mediatorId: session.user.id,
+        masterId: bid.userId
+      }
     });
     // Обновляем статус объявления, чтобы скрыть его с главной
     await prisma.announcement.update({
