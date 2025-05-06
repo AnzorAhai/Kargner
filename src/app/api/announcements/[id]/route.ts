@@ -40,4 +40,29 @@ export async function GET(
       { status: 500 }
     );
   }
+}
+
+// Delete announcement and related bids/orders for its owner
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+  // Authenticate and authorize
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  // Fetch the announcement
+  const announcement = await prisma.announcement.findUnique({ where: { id: params.id } });
+  if (!announcement) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+  // Only owner can delete
+  if (announcement.userId !== session.user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+  // Delete related bids and orders, then announcement
+  await prisma.$transaction([
+    prisma.bid.deleteMany({ where: { announcementId: params.id } }),
+    prisma.order.deleteMany({ where: { announcementId: params.id } }),
+    prisma.announcement.delete({ where: { id: params.id } })
+  ]);
+  return NextResponse.json({ ok: true });
 } 

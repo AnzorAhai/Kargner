@@ -28,10 +28,10 @@ interface Announcement {
 
 export default function AnnouncementPage({ params }: { params: { id: string } }) {
   const { data: session, status } = useSession();
+  const router = useRouter();
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const router = useRouter();
   const [assigningBidId, setAssigningBidId] = useState<string | null>(null);
   const [publicState, setPublicState] = useState<{ id: string; name: string; orderId: string } | null>(null);
   const [isEditingBid, setIsEditingBid] = useState(false);
@@ -137,12 +137,35 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
             <h1 className="text-2xl font-bold text-gray-900">
               {announcement.title}
             </h1>
-            <Link
-              href="/"
-              className="text-sm font-medium text-blue-600 hover:text-blue-500"
-            >
-              ← Назад к списку
-            </Link>
+            <div className="flex items-center space-x-4">
+              {session?.user?.id === announcement.user.id && (
+                <button
+                  onClick={async () => {
+                    if (confirm('Удалить объявление? Это действие необратимо.')) {
+                      try {
+                        const res = await fetch(`/api/announcements/${params.id}`, { method: 'DELETE' });
+                        if (!res.ok) {
+                          const err = await res.json();
+                          throw new Error(err.error || err.message);
+                        }
+                        router.push('/');
+                      } catch (e: any) {
+                        alert(e.message || 'Ошибка при удалении объявления');
+                      }
+                    }
+                  }}
+                  className="text-sm text-red-600 hover:underline"
+                >
+                  Удалить
+                </button>
+              )}
+              <Link
+                href="/"
+                className="text-sm font-medium text-blue-600 hover:text-blue-500"
+              >
+                ← Назад к списку
+              </Link>
+            </div>
           </div>
         </div>
       </header>
