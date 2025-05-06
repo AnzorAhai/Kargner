@@ -44,25 +44,33 @@ export async function GET(
 
 // Delete announcement and related bids/orders for its owner
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
-  // Authenticate and authorize
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    // Authenticate and authorize
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    // Fetch the announcement
+    const announcement = await prisma.announcement.findUnique({ where: { id: params.id } });
+    if (!announcement) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+    // Only owner can delete
+    if (announcement.userId !== session.user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    // Delete related bids and orders, then announcement
+    await prisma.$transaction([
+      // delete orders first (they reference bids)
+      prisma.order.deleteMany({ where: { announcementId: params.id } }),
+      // then delete bids
+      prisma.bid.deleteMany({ where: { announcementId: params.id } }),
+      // finally delete the announcement
+      prisma.announcement.delete({ where: { id: params.id } })
+    ]);
+    return NextResponse.json({ ok: true });
+  } catch (error: any) {
+    console.error('Error deleting announcement:', error);
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
-  // Fetch the announcement
-  const announcement = await prisma.announcement.findUnique({ where: { id: params.id } });
-  if (!announcement) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  }
-  // Only owner can delete
-  if (announcement.userId !== session.user.id) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-  // Delete related bids and orders, then announcement
-  await prisma.$transaction([
-    prisma.bid.deleteMany({ where: { announcementId: params.id } }),
-    prisma.order.deleteMany({ where: { announcementId: params.id } }),
-    prisma.announcement.delete({ where: { id: params.id } })
-  ]);
-  return NextResponse.json({ ok: true });
 } 
