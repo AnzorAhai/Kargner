@@ -39,7 +39,7 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
   const fetchAnnouncement = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/announcements/${params.id}`);
+      const response = await fetch(`/api/announcements/${params.id}`, { cache: 'no-store' });
       if (!response.ok) {
         throw new Error('Ошибка при загрузке объявления');
       }
