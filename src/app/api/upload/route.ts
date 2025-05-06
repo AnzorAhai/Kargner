@@ -1,9 +1,10 @@
 export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-server';
+import { getSupabaseAdmin } from '@/lib/supabase-server';
 
 export async function POST(request: Request) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const formData = await request.formData();
     const file = formData.get('file') as File;
     if (!file) {
