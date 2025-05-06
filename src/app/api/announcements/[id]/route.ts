@@ -23,13 +23,17 @@ export async function GET(
     });
 
     if (!announcement) {
-      return NextResponse.json(
+      const res = NextResponse.json(
         { error: 'Объявление не найдено' },
         { status: 404 }
       );
+      res.headers.set('Cache-Control', 'no-store');
+      return res;
     }
 
-    return NextResponse.json(announcement);
+    const res = NextResponse.json(announcement);
+    res.headers.set('Cache-Control', 'no-store');
+    return res;
   } catch (error) {
     console.error('Error fetching announcement:', error);
     return NextResponse.json(
