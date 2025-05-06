@@ -16,36 +16,44 @@ function urlBase64ToUint8Array(base64String: string) {
 export default function PushSubscribe() {
   useEffect(() => {
     if ('serviceWorker' in navigator && 'PushManager' in window) {
-      navigator.serviceWorker.ready.then((swReg) => {
-        const subscribeUser = async () => {
-          try {
-            const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
-            const convertedKey = urlBase64ToUint8Array(publicKey);
-            const subscription = await swReg.pushManager.subscribe({
+      const registerAndSubscribe = async () => {
+        try {
+          // Register the service worker
+          const swReg = await navigator.serviceWorker.register('/service-worker.js');
+          console.log('Service worker registered:', swReg);
+
+          // Get existing subscription or subscribe anew
+          const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
+          const convertedKey = urlBase64ToUint8Array(publicKey);
+          const subscription =
+            (await swReg.pushManager.getSubscription()) ||
+            (await swReg.pushManager.subscribe({
               userVisibleOnly: true,
               applicationServerKey: convertedKey,
-            });
-            await fetch('/api/push/subscribe', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(subscription),
-            });
-            console.log('Push subscription sent to server');
-          } catch (err) {
-            console.error('Failed to subscribe to push', err);
-          }
-        };
+            }));
 
-        if (Notification.permission === 'default') {
-          Notification.requestPermission().then((permission) => {
-            if (permission === 'granted') {
-              subscribeUser();
-            }
+          // Send subscription details to the server
+          await fetch('/api/push/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(subscription),
           });
-        } else if (Notification.permission === 'granted') {
-          subscribeUser();
+          console.log('Push subscription sent to server');
+        } catch (err) {
+          console.error('Failed to register SW or subscribe to push', err);
         }
-      });
+      };
+
+      // Request permission then register and subscribe
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().then((permission) => {
+          if (permission === 'granted') {
+            registerAndSubscribe();
+          }
+        });
+      } else if (Notification.permission === 'granted') {
+        registerAndSubscribe();
+      }
     }
   }, []);
 

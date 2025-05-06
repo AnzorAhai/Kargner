@@ -68,7 +68,7 @@ export async function POST(req: Request) {
       const payload = JSON.stringify({
         title: 'Новая ставка',
         body: `${bidder.firstName} ${bidder.lastName} предложил ${price} ₽ на "${announcement.title}"`,
-        data: { announcementId, bidId: bid.id },
+        url: `/announcements/${announcementId}`
       });
       await Promise.all(
         subscriptions.map((sub: any) => webpush.sendNotification({ endpoint: sub.endpoint, keys: sub.keys } as any, payload))

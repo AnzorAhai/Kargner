@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     const userId = session.user.id;
     // Cast prisma to any to access PushSubscription model if TS types are not up-to-date
     const subscriptions = await (prisma as any).pushSubscription.findMany({ where: { userId } });
-    const payload = JSON.stringify({ title: 'Тестовое уведомление', body: 'Это тестовое push-сообщение', data: '/' });
+    const payload = JSON.stringify({ title: 'Тестовое уведомление', body: 'Это тестовое push-сообщение', url: '/' });
     await Promise.all(
       subscriptions.map((sub: any) => 
         webpush.sendNotification(

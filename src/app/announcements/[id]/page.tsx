@@ -33,7 +33,7 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
   const [error, setError] = useState('');
   const router = useRouter();
   const [assigningBidId, setAssigningBidId] = useState<string | null>(null);
-  const [assignedMaster, setAssignedMaster] = useState<{ id: string; name: string } | null>(null);
+  const [assignedMaster, setAssignedMaster] = useState<{ id: string; name: string; orderId: string } | null>(null);
 
   const fetchAnnouncement = async () => {
     setLoading(true);
@@ -88,7 +88,8 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
         const data = await res.json();
         throw new Error(data.error || 'Ошибка при назначении заказа');
       }
-      setAssignedMaster({ id: bid.user.id, name: `${bid.user.firstName} ${bid.user.lastName}` });
+      const orderData = await res.json();
+      setAssignedMaster({ id: bid.user.id, name: `${bid.user.firstName} ${bid.user.lastName}`, orderId: orderData.id });
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -213,14 +214,8 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
         {/* Блок для автора объявления: список всех ставок */}
         {session?.user?.id === announcement?.user.id && (
           <div className="px-4 py-6 sm:px-0">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center mb-4">
               <h2 className="text-xl font-semibold text-gray-900">Список мастеров</h2>
-              <button
-                onClick={fetchAnnouncement}
-                className="text-sm text-blue-600 hover:underline"
-              >
-                Обновить ставки
-              </button>
             </div>
             {/* Если мастер назначен, показываем сообщение и кнопку отмены */}
             {assignedMaster ? (
@@ -229,11 +224,20 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
                   Исполнитель назначен: {assignedMaster.name}
                 </span>
                 <button
-                  onClick={() => {
-                    // Отмена назначения: сбрасываем состояние
-                    setAssignedMaster(null);
-                    // Перезагрузим страницу, чтобы вернуться к списку мастеров
-                    window.location.reload();
+                  onClick={async () => {
+                    try {
+                      await fetch('/api/orders', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ orderId: assignedMaster.orderId, status: 'CANCELLED' })
+                      });
+                      // Сбросить мок-UI и обновить данные
+                      setAssignedMaster(null);
+                      fetchAnnouncement();
+                    } catch (err: any) {
+                      console.error(err);
+                      alert(err.message || 'Ошибка отмены заказа');
+                    }
                   }}
                   className="text-red-600 hover:underline"
                 >

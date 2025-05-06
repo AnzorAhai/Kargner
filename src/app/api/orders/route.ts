@@ -91,8 +91,24 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Missing orderId or status' }, { status: 400 });
   }
   try {
-    const order = await prisma.order.update({ where: { id: orderId }, data: { status } });
-    return NextResponse.json(order);
+    let updatedOrder;
+    // If mediator cancels assignment, revert announcement status
+    if (status === 'CANCELLED' && session.user.role === 'INTERMEDIARY') {
+      // Find existing order to get announcementId
+      const existingOrder = await prisma.order.findUnique({ where: { id: orderId } });
+      if (!existingOrder) {
+        return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+      }
+      // Perform transaction: cancel order and reactivate announcement
+      await prisma.$transaction([
+        prisma.order.update({ where: { id: orderId }, data: { status: 'CANCELLED' } }),
+        prisma.announcement.update({ where: { id: existingOrder.announcementId }, data: { status: 'ACTIVE' } })
+      ]);
+      updatedOrder = await prisma.order.findUnique({ where: { id: orderId } });
+    } else {
+      updatedOrder = await prisma.order.update({ where: { id: orderId }, data: { status } });
+    }
+    return NextResponse.json(updatedOrder);
   } catch (error) {
     console.error('Error updating status:', error);
     return NextResponse.json({ error: 'Error updating status' }, { status: 500 });
