@@ -49,9 +49,9 @@ export async function POST(request: Request) {
     const body = await request.json();
     console.log('Received request body:', body);
 
-    const { title, description, address, imageUrl } = body;
+    const { title, description, address, imageUrl, clientName, clientPhone } = body;
 
-    if (!title || !description || !address || !imageUrl) {
+    if (!title || !description || !address || !imageUrl || !clientName || !clientPhone) {
       return NextResponse.json(
         { error: 'Все поля обязательны для заполнения' },
         { status: 400 }
@@ -67,6 +67,8 @@ export async function POST(request: Request) {
         status: 'ACTIVE',
         imageUrl,
         userId: session.user.id,
+        clientName,
+        clientPhone,
       },
     });
 
