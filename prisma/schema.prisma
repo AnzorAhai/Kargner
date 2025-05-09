@@ -37,6 +37,8 @@ model Announcement {
   id          String    @id @default(cuid())
   title       String
   description String
+  clientName  String
+  clientPhone String
   address     String
   price       Float
   status      Status    @default(ACTIVE)
@@ -99,6 +101,7 @@ model Review {
 enum Role {
   MASTER
   INTERMEDIARY
+  ADMIN
 }
 
 enum Status {

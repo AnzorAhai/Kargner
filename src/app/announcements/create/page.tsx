@@ -9,6 +9,8 @@ import { supabase } from '@/lib/supabase';
 interface AnnouncementFormData {
   title: string;
   description: string;
+  clientName: string;
+  clientPhone: string;
   address: string;
   imageUrl: string;
 }
@@ -19,6 +21,8 @@ export default function CreateAnnouncementPage() {
   const [formData, setFormData] = useState<AnnouncementFormData>({
     title: '',
     description: '',
+    clientName: '',
+    clientPhone: '',
     address: '',
     imageUrl: '',
   });
@@ -76,8 +80,8 @@ export default function CreateAnnouncementPage() {
     e.preventDefault();
     setError('');
     // Validate required fields
-    if (!formData.title.trim() || !formData.description.trim() || !formData.address.trim()) {
-      setError('Пожалуйста, заполните все поля: заголовок, описание, адрес');
+    if (!formData.title.trim() || !formData.description.trim() || !formData.clientName.trim() || !formData.clientPhone.trim() || !formData.address.trim()) {
+      setError('Пожалуйста, заполните все поля: заголовок, описание, имя клиента, телефон клиента, адрес');
       return;
     }
     if (!imageFile) {
@@ -94,6 +98,8 @@ export default function CreateAnnouncementPage() {
       const payload = {
         title: formData.title.trim(),
         description: formData.description.trim(),
+        clientName: formData.clientName.trim(),
+        clientPhone: formData.clientPhone.trim(),
         address: formData.address.trim(),
         imageUrl,
       };
@@ -162,6 +168,36 @@ export default function CreateAnnouncementPage() {
                   rows={4}
                   required
                   value={formData.description}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="clientName" className="block text-sm font-medium text-gray-700">
+                  Имя клиента
+                </label>
+                <input
+                  type="text"
+                  name="clientName"
+                  id="clientName"
+                  required
+                  value={formData.clientName}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="clientPhone" className="block text-sm font-medium text-gray-700">
+                  Телефон клиента
+                </label>
+                <input
+                  type="text"
+                  name="clientPhone"
+                  id="clientPhone"
+                  required
+                  value={formData.clientPhone}
                   onChange={handleChange}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                 />

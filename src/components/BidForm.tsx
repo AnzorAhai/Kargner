@@ -41,7 +41,7 @@ export function BidForm({ announcementId, initialPrice, onSuccess, bidId }: BidF
           setLoading(false);
         }
       } else {
-        setError('Введите цену');
+      setError('Введите цену');
       }
       return;
     }
@@ -61,7 +61,7 @@ export function BidForm({ announcementId, initialPrice, onSuccess, bidId }: BidF
       if (onSuccess) {
         onSuccess();
       } else {
-        window.location.reload();
+      window.location.reload();
       }
     } catch (err: any) {
       setError(err.message);
