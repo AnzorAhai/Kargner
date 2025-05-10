@@ -7,21 +7,49 @@ import { authOptions } from '@/lib/auth';
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
-    const announcements = await prisma.announcement.findMany({
+    const currentUserId = session?.user?.id;
+
+    const announcementsFromDb = await prisma.announcement.findMany({
       where: { status: 'ACTIVE' },
       include: {
         user: {
           select: { id: true, firstName: true, lastName: true, rating: true, ratingCount: true }
         },
-        bids: userId
-          ? { where: { userId }, select: { id: true, price: true } }
-          : false,
+        bids: { // Fetch all bids for each announcement
+          select: { userId: true, price: true }
+        },
       },
       orderBy: { createdAt: 'desc' }
     });
 
-    console.log('Found announcements:', announcements);
+    const announcements = announcementsFromDb.map(announcement => {
+      let minBidPrice: number | null = null;
+      let currentUserBidPrice: number | null = null;
+
+      if (announcement.bids && announcement.bids.length > 0) {
+        minBidPrice = Math.min(...announcement.bids.map(b => b.price));
+        
+        if (currentUserId && session?.user?.role === 'MASTER') {
+          const userBid = announcement.bids.find(b => b.userId === currentUserId);
+          if (userBid) {
+            currentUserBidPrice = userBid.price;
+          }
+        }
+      }
+      
+      // Remove the full bids array from the final announcement object sent to the client for the main list,
+      // as it might be large and is not directly used by the card after calculating min and current user's bid.
+      // Keep other properties of the announcement.
+      const { bids, ...announcementData } = announcement;
+
+      return {
+        ...announcementData,
+        minBidPrice,
+        currentUserBidPrice,
+      };
+    });
+
+    console.log('Processed announcements for list:', announcements);
     return NextResponse.json(announcements);
   } catch (error) {
     console.error('Error fetching announcements:', error);

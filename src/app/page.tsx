@@ -19,7 +19,8 @@ interface Announcement {
     lastName: string;
     rating: number;
   };
-  bids?: { price: number }[];
+  minBidPrice: number | null;
+  currentUserBidPrice: number | null;
 }
 
 export default function HomePage() {
@@ -129,15 +130,21 @@ export default function HomePage() {
                     <h3 className="text-lg font-medium text-gray-900">
                       {announcement.title}
                     </h3>
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm text-gray-500 truncate">
                       {announcement.description}
                     </p>
                     <div className="mt-4">
                       {session?.user?.role === 'MASTER' ? (
-                        announcement.bids && announcement.bids.length > 0 ? (
-                          <span className="text-green-600 text-sm">
-                            Вы указали {announcement.bids[0].price} ₽
-                          </span>
+                        announcement.currentUserBidPrice !== null ? (
+                          announcement.minBidPrice !== null && announcement.currentUserBidPrice <= announcement.minBidPrice ? (
+                            <span className="text-green-600 text-sm font-semibold">
+                              Вы указали {announcement.currentUserBidPrice} ₽. Ваша ставка лидирует!
+                            </span>
+                          ) : (
+                            <span className="text-red-600 text-sm font-semibold">
+                              Вы указали {announcement.currentUserBidPrice} ₽. Вашу ставку перебили!
+                            </span>
+                          )
                         ) : (
                           <span className="text-gray-500 text-sm">
                             Вы ещё не указали цену
@@ -145,7 +152,7 @@ export default function HomePage() {
                         )
                       ) : (
                         <div className="flex items-center justify-between text-sm text-gray-500">
-                          <span>{announcement.user.firstName} {announcement.user.lastName}</span>
+                          <span>Автор: {announcement.user.firstName} {announcement.user.lastName}</span>
                         </div>
                       )}
                     </div>
