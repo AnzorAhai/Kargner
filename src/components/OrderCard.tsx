@@ -100,9 +100,6 @@ export default function OrderCard({ order, onStatusChange, onPayCommission }: Or
               {session?.user?.role === 'INTERMEDIARY' && order.master && (
                 <span>Исполнитель: {order.master.firstName} {order.master.lastName}</span>
               )}
-              {session?.user?.role === 'MASTER' && (
-                <span>{order.announcement.user.firstName} {order.announcement.user.lastName}</span>
-              )}
             </div>
             <div className="text-lg font-semibold text-green-600">
               {order.bid.price.toLocaleString('ru-RU')} ₽

@@ -19,6 +19,21 @@ interface ProfileCardProps {
   onEdit?: () => void;
 }
 
+const getRoleDisplayName = (role: 'MASTER' | 'INTERMEDIARY' | 'ADMIN'): string => {
+  switch (role) {
+    case 'MASTER':
+      return 'Мастер';
+    case 'INTERMEDIARY':
+      return 'Посредник';
+    case 'ADMIN':
+      return 'Администратор';
+    default:
+      // Should not happen with TypeScript, but as a fallback
+      const exhaustiveCheck: never = role;
+      return exhaustiveCheck;
+  }
+};
+
 export default function ProfileCard({ user, isEditable = false, onEdit }: ProfileCardProps) {
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
@@ -46,8 +61,8 @@ export default function ProfileCard({ user, isEditable = false, onEdit }: Profil
               <h2 className="text-2xl font-bold text-black">
                 {user.firstName} {user.lastName}
               </h2>
-              <p className="text-gray-600 capitalize">
-                {user.role.toLowerCase()}
+              <p className="text-gray-600">
+                {getRoleDisplayName(user.role)}
               </p>
             </div>
             {isEditable && (
