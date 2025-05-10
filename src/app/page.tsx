@@ -150,10 +150,12 @@ export default function HomePage() {
                             Вы ещё не указали цену
                           </span>
                         )
-                      ) : (
+                      ) : session?.user?.role === 'ADMIN' ? (
                         <div className="flex items-center justify-between text-sm text-gray-500">
                           <span>Автор: {announcement.user.firstName} {announcement.user.lastName}</span>
                         </div>
+                      ) : (
+                        <div className="h-5"></div>
                       )}
                     </div>
                   </div>

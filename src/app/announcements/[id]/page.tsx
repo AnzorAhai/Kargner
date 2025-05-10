@@ -54,6 +54,7 @@ function AnnouncementPageComponent({ params }: { params: { id: string } }) {
         throw new Error('Ошибка при загрузке объявления');
       }
       const data = await response.json();
+      console.log('Fetched announcement data for details page:', data);
       setAnnouncement(data);
 
       // Fetch all bids separately for min/max calculations and for intermediary view
@@ -352,14 +353,16 @@ function AnnouncementPageComponent({ params }: { params: { id: string } }) {
                         {announcement.address}
                       </dd>
                     </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">
-                        Автор объявления
-                      </dt>
-                      <dd className="mt-1 text-sm text-gray-900">
-                        {announcement.user.firstName} {announcement.user.lastName}
-                      </dd>
-                    </div>
+                    {session?.user?.role === 'ADMIN' && (
+                      <div>
+                        <dt className="text-sm font-medium text-gray-500">
+                          Автор объявления
+                        </dt>
+                        <dd className="mt-1 text-sm text-gray-900">
+                          {announcement.user.firstName} {announcement.user.lastName}
+                        </dd>
+                      </div>
+                    )}
                     <div>
                       <dt className="text-sm font-medium text-gray-500">
                         Дата создания
