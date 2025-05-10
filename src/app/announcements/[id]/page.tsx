@@ -180,6 +180,79 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
       </header>
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+
+        {/* Блок для автора объявления: список всех ставок - ПЕРЕМЕЩЕН ВВЕРХ */}
+        {session?.user?.id === announcement?.user.id && (
+          <div className="px-4 py-6 sm:px-0">
+            <div className="flex items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">Список мастеров</h2>
+            </div>
+            {/* Если мастер назначен, показываем сообщение и кнопку отмены */}
+            {publicState ? (
+              <div className="flex items-center justify-between bg-green-100 p-4 rounded-lg">
+                <span className="text-green-800 font-medium">
+                  Исполнитель назначен: {publicState.name}
+                </span>
+                <button
+                  onClick={async () => {
+                    try {
+                      await fetch('/api/orders', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ orderId: publicState.orderId, status: 'CANCELLED' })
+                      });
+                      // Сбросить мок-UI и обновить данные
+                      setPublicState(null);
+                      fetchAnnouncement();
+                    } catch (err: any) {
+                      console.error(err);
+                      alert(err.message || 'Ошибка отмены заказа');
+                    }
+                  }}
+                  className="text-red-600 hover:underline"
+                >
+                  Отменить?
+                </button>
+              </div>
+            ) : (
+              <div className="bg-white shadow-lg rounded-lg p-6">
+                {bidsData.length > 0 ? (
+                  <div className="space-y-4">
+                    {bidsData
+                      .slice()
+                      .sort((a, b) => a.price - b.price)
+                      .map(bid => (
+                        <div
+                          key={bid.id}
+                          className="flex justify-between items-center p-4 bg-gray-50 rounded"
+                        >
+                          <span className="text-gray-900">
+                            {bid.user.firstName} {bid.user.lastName}
+                          </span>
+                          <div className="flex items-center space-x-3">
+                            <span className="text-gray-900 font-medium">
+                              {bid.price} ₽
+                            </span>
+                            <button
+                              onClick={() => handleAssign(bid)}
+                              disabled={assigningBidId === bid.id}
+                              className="px-3 py-1 bg-green-600 text-white rounded disabled:opacity-50"
+                            >
+                              {assigningBidId === bid.id ? 'Назначение...' : 'Назначить'}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-900">Ставок ещё нет</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Блок с деталями объявления */}
         <div className="px-4 py-6 sm:px-0">
           <div className="bg-white shadow overflow-hidden sm:rounded-lg">
             <div className="relative h-64 cursor-pointer" onClick={() => setIsImageModalOpen(true)}>
@@ -294,77 +367,6 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
                 </div>
               );
             })()}
-          </div>
-        )}
-
-        {/* Блок для автора объявления: список всех ставок */}
-        {session?.user?.id === announcement?.user.id && (
-          <div className="px-4 py-6 sm:px-0">
-            <div className="flex items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">Список мастеров</h2>
-            </div>
-            {/* Если мастер назначен, показываем сообщение и кнопку отмены */}
-            {publicState ? (
-              <div className="flex items-center justify-between bg-green-100 p-4 rounded-lg">
-                <span className="text-green-800 font-medium">
-                  Исполнитель назначен: {publicState.name}
-                </span>
-                <button
-                  onClick={async () => {
-                    try {
-                      await fetch('/api/orders', {
-                        method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ orderId: publicState.orderId, status: 'CANCELLED' })
-                      });
-                      // Сбросить мок-UI и обновить данные
-                      setPublicState(null);
-                      fetchAnnouncement();
-                    } catch (err: any) {
-                      console.error(err);
-                      alert(err.message || 'Ошибка отмены заказа');
-                    }
-                  }}
-                  className="text-red-600 hover:underline"
-                >
-                  Отменить?
-                </button>
-              </div>
-            ) : (
-              <div className="bg-white shadow-lg rounded-lg p-6">
-                {bidsData.length > 0 ? (
-                  <div className="space-y-4">
-                    {bidsData
-                      .slice()
-                      .sort((a, b) => a.price - b.price)
-                      .map(bid => (
-                        <div
-                          key={bid.id}
-                          className="flex justify-between items-center p-4 bg-gray-50 rounded"
-                        >
-                          <span className="text-gray-900">
-                            {bid.user.firstName} {bid.user.lastName}
-                          </span>
-                          <div className="flex items-center space-x-3">
-                            <span className="text-gray-900 font-medium">
-                              {bid.price} ₽
-                            </span>
-                            <button
-                              onClick={() => handleAssign(bid)}
-                              disabled={assigningBidId === bid.id}
-                              className="px-3 py-1 bg-green-600 text-white rounded disabled:opacity-50"
-                            >
-                              {assigningBidId === bid.id ? 'Назначение...' : 'Назначить'}
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-900">Ставок ещё нет</p>
-                )}
-              </div>
-            )}
           </div>
         )}
       </main>

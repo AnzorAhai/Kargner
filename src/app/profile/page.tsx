@@ -102,38 +102,6 @@ export default function ProfilePage() {
     setIsEditing(false);
   };
 
-  const handleMakeMeAdmin = async () => {
-    if (!session?.user?.id) {
-      alert('Ошибка: не удалось получить ID пользователя из сессии.');
-      return;
-    }
-    if (!confirm('Вы уверены, что хотите назначить себя администратором? Это действие предназначено для первоначальной настройки.')) {
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/admin/users', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: session.user.id, role: 'ADMIN' }),
-      });
-
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(responseData.error || 'Не удалось обновить роль пользователя.');
-      }
-
-      alert('Вы успешно назначены администратором! Пожалуйста, перезагрузите страницу или войдите снова, чтобы изменения вступили в силу.');
-      await updateSession({ ...session, user: { ...session.user, role: 'ADMIN' } });
-      setUser(prevUser => prevUser ? { ...prevUser, role: 'ADMIN' as User['role'] } : null);
-      
-    } catch (err: any) {
-      alert(`Ошибка: ${err.message}`);
-      console.error('Error making self admin:', err);
-    }
-  };
-
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -183,20 +151,6 @@ export default function ProfilePage() {
             onEdit={handleEdit}
           />
           <WalletSection balance={user.balance} />
-
-          {user && user.role !== 'ADMIN' && session?.user?.id === user.id && (
-            <div className="mt-6 p-4 bg-yellow-100 border border-yellow-300 rounded-md">
-              <h3 className="text-lg font-semibold text-yellow-800">Временная панель администратора</h3>
-              <p className="text-yellow-700 mt-1">Эта кнопка предназначена для первоначальной настройки первого администратора.</p>
-              <button
-                onClick={handleMakeMeAdmin}
-                className="mt-3 px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
-              >
-                Сделать меня администратором
-              </button>
-              <p className="text-xs text-yellow-600 mt-2">После использования, пожалуйста, попросите разработчика удалить эту кнопку.</p>
-            </div>
-          )}
         </div>
       </main>
 

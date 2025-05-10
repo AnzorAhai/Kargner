@@ -39,11 +39,12 @@ export async function DELETE(request: Request) {
   return NextResponse.json({ ok: true });
 }
 
-// ВРЕМЕННО: Изменить роль пользователя (БЕЗ проверки на админа у запрашивающего)
+// Изменить роль пользователя (ВОЗВРАЩАЕМ ПРОВЕРКУ НА АДМИНА)
 export async function PATCH(request: Request) {
   const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // ВОЗВРАЩАЕМ ПРОВЕРКУ: пользователь должен быть авторизован И быть админом
+  if (!session || session.user.role !== 'ADMIN') { 
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
