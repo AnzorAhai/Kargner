@@ -68,7 +68,7 @@ export default function AdminAnnouncementsPage() {
   return (
     <main className="p-8">
       <h1 className="text-2xl font-bold mb-4">Объявления</h1>
-      <table className="min-w-full bg-white border">
+      <table className="min-w-full bg-card border">
         <thead>
           <tr>
             <th className="border px-4 py-2">Заголовок</th>
