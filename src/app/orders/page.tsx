@@ -9,10 +9,13 @@ interface Order {
   status: 'PENDING' | 'ACCEPTED' | 'COMPLETED' | 'CANCELLED';
   commission: number;
   announcement: {
+    id: string;
     title: string;
     description: string;
     address: string;
     imageUrl: string;
+    clientName: string;
+    clientPhone: string;
     user: {
       firstName: string;
       lastName: string;
@@ -22,6 +25,14 @@ interface Order {
   bid: {
     price: number;
   };
+  masterId?: string | null;
+  mediatorId: string;
+  master?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+  } | null;
 }
 
 export default function OrdersPage() {

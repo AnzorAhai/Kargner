@@ -181,7 +181,7 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
 
-        {/* Блок для автора объявления: список всех ставок - ПЕРЕМЕЩЕН ВВЕРХ */}
+        {/* Блок для автора объявления: список всех ставок */}
         {session?.user?.id === announcement?.user.id && (
           <div className="px-4 py-6 sm:px-0">
             <div className="flex items-center mb-4">
@@ -252,6 +252,77 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
           </div>
         )}
 
+        {/* Отображение минимальной текущей ставки */}
+        {(session?.user?.role === 'MASTER' || session?.user?.id === announcement?.user.id) && bidsData && (
+          <div className="px-4 pt-6 pb-2 sm:px-0 text-sm text-gray-700">
+            {bidsData.length > 0 ? (
+              <p>
+                Минимальная текущая ставка: <span className="font-semibold">{Math.min(...bidsData.map(b => b.price))} ₽</span>
+              </p>
+            ) : (
+              <p>Ставок на это объявление пока нет.</p>
+            )}
+          </div>
+        )}
+
+        {/* Блок для мастеров: форма или информация о своей ставке - ПЕРЕМЕЩЕН ВВЕРХ */}
+        {session?.user?.role === 'MASTER' && (
+          <div className="px-4 pt-2 pb-6 sm:px-0">
+            {(() => {
+              const myBid = bidsData.find(b => b.user.id === session.user.id);
+              
+              if (!myBid || isEditingBid) {
+                return (
+                  <BidForm
+                    announcementId={params.id}
+                    initialPrice={myBid?.price}
+                    bidId={myBid?.id}
+                    onSuccess={() => {
+                      setIsEditingBid(false);
+                      fetchAnnouncement();
+                    }}
+                  />
+                );
+              }
+
+              // Определяем, лидирует ли ставка мастера
+              let isLeadingBid = false;
+              let message = '';
+              let textColor = 'text-green-600'; // По умолчанию зеленый
+
+              if (bidsData && bidsData.length > 0) {
+                const minPrice = Math.min(...bidsData.map(b => b.price));
+                if (myBid.price === minPrice) {
+                  isLeadingBid = true;
+                  message = 'Ваша ставка лидирует';
+                  // textColor остается 'text-green-600'
+                } else {
+                  message = 'Вашу ставку перебили!';
+                  textColor = 'text-red-600';
+                }
+              } else if (bidsData && bidsData.length === 0 && myBid) {
+                // Если ставок других нет, а моя есть - я лидирую
+                isLeadingBid = true;
+                message = 'Ваша ставка лидирует';
+                 // textColor остается 'text-green-600'
+              }
+              
+              // Show current bid with edit button
+              return (
+                <div className="flex items-center space-x-2">
+                  <span className={textColor}>Вы указали {myBid.price} ₽. {message}</span>
+                  <button
+                    onClick={() => setIsEditingBid(true)}
+                    className="text-sm text-blue-600 hover:underline ml-2"
+                  >
+                    Изменить цену?
+                  </button>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
         {/* Блок с деталями объявления */}
         <div className="px-4 py-6 sm:px-0">
           <div className="bg-white shadow overflow-hidden sm:rounded-lg">
@@ -286,14 +357,6 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
                   </dt>
                   <dd className="mt-1 text-sm text-gray-900">
                     {announcement.user.firstName} {announcement.user.lastName}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">
-                    Рейтинг автора
-                  </dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {announcement.user.rating} ({announcement.user.ratingCount} отзывов)
                   </dd>
                 </div>
                 <div>
@@ -335,40 +398,6 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
           </div>
         )}
 
-        {/* Блок для мастеров: форма или информация о своей ставке */}
-        {session?.user?.role === 'MASTER' && (
-          <div className="px-4 py-6 sm:px-0">
-            {(() => {
-              const myBid = bidsData.find(b => b.user.id === session.user.id);
-              // If no bid yet or currently editing, show BidForm
-              if (!myBid || isEditingBid) {
-                return (
-                  <BidForm
-                    announcementId={params.id}
-                    initialPrice={myBid?.price}
-                    bidId={myBid?.id}
-                    onSuccess={() => {
-                      setIsEditingBid(false);
-                      fetchAnnouncement();
-                    }}
-                  />
-                );
-              }
-              // Show current bid with edit button
-              return (
-                <div className="flex items-center space-x-2">
-                  <span className="text-green-600">Вы указали {myBid.price} ₽</span>
-                  <button
-                    onClick={() => setIsEditingBid(true)}
-                    className="text-sm text-blue-600 hover:underline"
-                  >
-                    Изменить цену?
-                  </button>
-                </div>
-              );
-            })()}
-          </div>
-        )}
       </main>
     </div>
   );

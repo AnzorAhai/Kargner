@@ -9,10 +9,13 @@ interface OrderCardProps {
     status: 'PENDING' | 'ACCEPTED' | 'COMPLETED' | 'CANCELLED';
     commission: number;
     announcement: {
+      id: string;
       title: string;
       description: string;
       address: string;
       imageUrl: string;
+      clientName: string;
+      clientPhone: string;
       user: {
         firstName: string;
         lastName: string;
@@ -22,10 +25,14 @@ interface OrderCardProps {
     bid: {
       price: number;
     };
+    masterId?: string | null;
+    mediatorId: string;
     master?: {
+      id: string;
       firstName: string;
       lastName: string;
-    };
+      phone: string;
+    } | null;
   };
   onStatusChange: (orderId: string, status: string) => void;
   onPayCommission: (orderId: string) => void;
@@ -73,9 +80,23 @@ export default function OrderCard({ order, onStatusChange, onPayCommission }: Or
           <span>{order.announcement.address}</span>
         </div>
 
-        <div className="flex items-center text-gray-500 text-sm mb-4">
-          <FaPhone className="mr-1" />
-          <span>{order.announcement.user.phone}</span>
+        {(session?.user?.id === order.mediatorId || (session?.user?.id === order.masterId && order.masterId)) && (
+          <>
+            <div className="mt-2 text-sm">
+              <p className="font-semibold text-gray-700">Контакт клиента:</p>
+              <p className="text-gray-600">Имя: {order.announcement.clientName}</p>
+              <div className="flex items-center text-gray-600">
+                <FaPhone className="mr-1 flex-shrink-0" />
+                <span>{order.announcement.clientPhone}</span>
+              </div>
+            </div>
+          </>
+        )}
+
+        <div className="flex items-center text-gray-500 text-sm mb-4 mt-2">
+          <p className="font-semibold text-gray-700 mr-1">Посредник:</p>
+          <FaPhone className="mr-1 flex-shrink-0" />
+          <span>{order.announcement.user.phone} ({order.announcement.user.firstName} {order.announcement.user.lastName})</span>
         </div>
 
         <div className="flex justify-between items-center mb-4">

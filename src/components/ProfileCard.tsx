@@ -60,7 +60,7 @@ export default function ProfileCard({ user, isEditable = false, onEdit }: Profil
             )}
           </div>
 
-          <div className="mt-4 flex items-center">
+          {/* <div className="mt-4 flex items-center">
             <div className="flex items-center text-yellow-400">
               <FaStar className="mr-1" />
               <span className="font-semibold">{user.rating.toFixed(1)}</span>
@@ -68,7 +68,7 @@ export default function ProfileCard({ user, isEditable = false, onEdit }: Profil
             <span className="text-gray-500 ml-2">
               ({user.ratingCount} отзывов)
             </span>
-          </div>
+          </div> */}
 
           {user.bio && (
             <p className="mt-4 text-gray-700">{user.bio}</p>

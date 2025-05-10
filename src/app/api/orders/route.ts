@@ -24,14 +24,25 @@ export async function GET(request: Request) {
       where: whereClause,
       include: {
         announcement: {
-          include: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            address: true,
+            imageUrl: true,
+            clientName: true,
+            clientPhone: true,
             user: {
               select: { firstName: true, lastName: true, phone: true }
             }
           }
         },
-        bid: true,
-        master: { select: { firstName: true, lastName: true, phone: true } }
+        bid: {
+          select: { price: true }
+        },
+        master: {
+          select: { id: true, firstName: true, lastName: true, phone: true }
+        },
       },
       orderBy: { createdAt: 'desc' }
     });
