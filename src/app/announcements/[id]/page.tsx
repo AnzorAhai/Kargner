@@ -36,6 +36,7 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
   const [publicState, setPublicState] = useState<{ id: string; name: string; orderId: string } | null>(null);
   const [isEditingBid, setIsEditingBid] = useState(false);
   const [bidsData, setBidsData] = useState<Announcement['bids']>([]);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   const fetchAnnouncement = async () => {
     setLoading(true);
@@ -139,25 +140,33 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
             </h1>
             <div className="flex items-center space-x-4">
               {session?.user?.id === announcement.user.id && (
-                <button
-                  onClick={async () => {
-                    if (confirm('Удалить объявление? Это действие необратимо.')) {
-                      try {
-                        const res = await fetch(`/api/announcements/${params.id}`, { method: 'DELETE' });
-                        if (!res.ok) {
-                          const err = await res.json();
-                          throw new Error(err.error || err.message);
+                <>
+                  <Link
+                    href={`/announcements/${params.id}/edit`}
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    Редактировать
+                  </Link>
+                  <button
+                    onClick={async () => {
+                      if (confirm('Удалить объявление? Это действие необратимо.')) {
+                        try {
+                          const res = await fetch(`/api/announcements/${params.id}`, { method: 'DELETE' });
+                          if (!res.ok) {
+                            const err = await res.json();
+                            throw new Error(err.error || err.message);
+                          }
+                          router.push('/');
+                        } catch (e: any) {
+                          alert(e.message || 'Ошибка при удалении объявления');
                         }
-                        router.push('/');
-                      } catch (e: any) {
-                        alert(e.message || 'Ошибка при удалении объявления');
                       }
-                    }
-                  }}
-                  className="text-sm text-red-600 hover:underline"
-                >
-                  Удалить
-                </button>
+                    }}
+                    className="text-sm text-red-600 hover:underline"
+                  >
+                    Удалить
+                  </button>
+                </>
               )}
               <Link
                 href="/"
@@ -173,7 +182,7 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-            <div className="relative h-64">
+            <div className="relative h-64 cursor-pointer" onClick={() => setIsImageModalOpen(true)}>
               <img
                 src={announcement.imageUrl}
                 alt={announcement.title}
@@ -226,6 +235,32 @@ export default function AnnouncementPage({ params }: { params: { id: string } })
             </div>
           </div>
         </div>
+
+        {/* Модальное окно для изображения */}
+        {isImageModalOpen && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+            onClick={() => setIsImageModalOpen(false)}
+          >
+            <div
+              className="relative bg-white p-2 rounded-lg shadow-xl max-w-full max-h-full overflow-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={announcement.imageUrl}
+                alt={announcement.title}
+                className="block max-w-full max-h-[90vh] object-contain"
+              />
+              <button
+                onClick={() => setIsImageModalOpen(false)}
+                className="absolute top-2 right-2 text-white bg-gray-800 hover:bg-gray-700 rounded-full p-2 text-xl leading-none"
+                aria-label="Закрыть"
+              >
+                &times;
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Блок для мастеров: форма или информация о своей ставке */}
         {session?.user?.role === 'MASTER' && (
