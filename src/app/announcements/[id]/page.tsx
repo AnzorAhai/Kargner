@@ -169,6 +169,9 @@ function AnnouncementPageComponent({ params }: { params: { id: string } }) {
   const myBid = session?.user?.id ? bidsData.find(b => b.user.id === session.user.id) : undefined;
   const minPrice = bidsData.length > 0 ? Math.min(...bidsData.map(b => b.price)) : Infinity;
 
+  // Determine if client data should be shown
+  const showClientData = (session?.user?.id === announcement?.user.id) || 
+                         (session?.user?.role === 'MASTER' && isOrderViewForMaster);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -357,12 +360,14 @@ function AnnouncementPageComponent({ params }: { params: { id: string } }) {
           <div className="px-4 py-5 sm:px-6">
             <div className="flex flex-col md:flex-row">
               <div className="md:w-1/2 pr-0 md:pr-8 mb-4 md:mb-0">
-                {/* Информация о клиенте - отображается всегда, если есть */} 
-                <div className="border-t border-gray-200 pt-4">
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Данные клиента</h3>
-                    <p className="text-sm text-gray-600">Имя: {announcement.clientName}</p>
-                    <p className="text-sm text-gray-600">Телефон: {announcement.clientPhone}</p>
-                </div>
+                {/* Информация о клиенте - отображается только при определенных условиях */}
+                {showClientData && (
+                  <div className="border-t border-gray-200 pt-4">
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Данные клиента</h3>
+                      <p className="text-sm text-gray-600">Имя: {announcement.clientName}</p>
+                      <p className="text-sm text-gray-600">Телефон: {announcement.clientPhone}</p>
+                  </div>
+                )}
               </div>
 
               <div className="md:w-1/2">
