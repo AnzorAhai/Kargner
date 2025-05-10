@@ -291,15 +291,9 @@ function AnnouncementPageComponent({ params }: { params: { id: string } }) {
               )}
 
               {myBid ? (
-                myBid.price <= minPrice ? (
-                  <p className="text-green-600 font-semibold mb-3">
-                    Вы указали {myBid.price} ₽. Ваша ставка лидирует!
-                  </p>
-                ) : (
-                  <p className="text-red-600 font-semibold mb-3">
-                    Вы указали {myBid.price} ₽. Вашу ставку перебили!
-                  </p>
-                )
+                <p className="text-gray-700 font-semibold mb-3">
+                  Вы указали {myBid.price} ₽.
+                </p>
               ) : (
                 <p className="text-gray-600 mb-3">Вы еще не указали цену для этого объявления.</p>
               )}
