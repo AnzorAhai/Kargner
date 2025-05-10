@@ -56,6 +56,7 @@ function AnnouncementPageComponent({ params }: { params: { id: string } }) {
       const data = await response.json();
       console.log('Fetched announcement data for details page:', data);
       setAnnouncement(data);
+      console.log('Image URL from fetched data:', data.imageUrl); // Debugging image URL
 
       // Fetch all bids separately for min/max calculations and for intermediary view
       const allBidsResponse = await fetch(`/api/bids?announcementId=${params.id}`, { cache: 'no-store' });
@@ -220,6 +221,45 @@ function AnnouncementPageComponent({ params }: { params: { id: string } }) {
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         
+        {/* Image Display */}
+        {/* {announcement.imageUrl && console.log('Image URL:', announcement.imageUrl)} Ensure this is removed or correctly placed if re-added */}
+        {announcement.imageUrl && (
+          <div className="mb-6">
+            <img
+              src={announcement.imageUrl}
+              alt={announcement.title}
+              className="w-full h-auto max-h-96 object-contain rounded-lg shadow-md cursor-pointer"
+              onClick={() => setIsImageModalOpen(true)}
+            />
+          </div>
+        )}
+
+        {/* Image Modal */}
+        {isImageModalOpen && announcement?.imageUrl && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+            onClick={() => setIsImageModalOpen(false)}
+          >
+            <div 
+              className="relative bg-white p-2 rounded-lg shadow-xl max-w-3xl max-h-[90vh]"
+              onClick={(e) => e.stopPropagation()} // Prevent closing when clicking on the image/modal content
+            >
+              <img 
+                src={announcement.imageUrl} 
+                alt={announcement.title}
+                className="max-w-full max-h-[85vh] object-contain rounded" 
+              />
+              <button
+                onClick={() => setIsImageModalOpen(false)}
+                className="absolute top-2 right-2 text-gray-700 bg-white bg-opacity-75 hover:bg-opacity-100 rounded-full p-1.5 text-2xl leading-none"
+                aria-label="Close image modal"
+              >
+                &times;
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Блок для автора объявления: список всех ставок */}
         {session?.user?.id === announcement?.user.id && (
           <div className="px-4 py-6 sm:px-0">
@@ -317,15 +357,6 @@ function AnnouncementPageComponent({ params }: { params: { id: string } }) {
           <div className="px-4 py-5 sm:px-6">
             <div className="flex flex-col md:flex-row">
               <div className="md:w-1/2 pr-0 md:pr-8 mb-4 md:mb-0">
-                {announcement.imageUrl && (
-                  <div className="relative aspect-w-16 aspect-h-9 mb-6 rounded-lg overflow-hidden shadow-md cursor-pointer" onClick={() => setIsImageModalOpen(true)}>
-                    <img
-                      src={announcement.imageUrl}
-                      alt={announcement.title}
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
-                  </div>
-                )}
                 {/* Информация о клиенте - отображается всегда, если есть */} 
                 <div className="border-t border-gray-200 pt-4">
                     <h3 className="text-lg font-medium text-gray-900 mb-2">Данные клиента</h3>
@@ -377,20 +408,6 @@ function AnnouncementPageComponent({ params }: { params: { id: string } }) {
             </div>
           </div>
         </div>
-        
-        {isImageModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4" onClick={() => setIsImageModalOpen(false)}>
-            <div className="relative max-w-3xl max-h-[80vh]" onClick={(e) => e.stopPropagation()}> 
-              <img src={announcement.imageUrl} alt={announcement.title} className="max-w-full max-h-full object-contain rounded-lg" />
-              <button 
-                onClick={() => setIsImageModalOpen(false)} 
-                className="absolute top-2 right-2 text-white bg-gray-800 bg-opacity-50 rounded-full p-2 hover:bg-opacity-75"
-              >
-                &times;
-              </button>
-            </div>
-          </div>
-        )}
       </main>
     </div>
   );
