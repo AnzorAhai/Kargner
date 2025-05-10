@@ -10,7 +10,7 @@ interface ProfileCardProps {
     avatarUrl?: string;
     phone: string;
     email?: string;
-    role: 'MASTER' | 'INTERMEDIARY';
+    role: 'MASTER' | 'INTERMEDIARY' | 'ADMIN';
     rating: number;
     ratingCount: number;
     portfolio?: string[];
