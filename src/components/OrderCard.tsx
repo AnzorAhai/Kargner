@@ -56,7 +56,7 @@ export default function OrderCard({ order, onStatusChange, onPayCommission }: Or
   };
 
   return (
-    <Link href={`/announcements/${order.announcement.id}`} className="block hover:shadow-lg transition-shadow duration-200">
+    <Link href={`/announcements/${order.announcement.id}?view=order`} className="block hover:shadow-lg transition-shadow duration-200">
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="relative h-48">
           <img
@@ -101,7 +101,7 @@ export default function OrderCard({ order, onStatusChange, onPayCommission }: Or
                 <span>Исполнитель: {order.master.firstName} {order.master.lastName}</span>
               )}
               {session?.user?.role === 'MASTER' && (
-                <span>Заказчик: {order.announcement.user.firstName} {order.announcement.user.lastName}</span>
+                <span>{order.announcement.user.firstName} {order.announcement.user.lastName}</span>
               )}
             </div>
             <div className="text-lg font-semibold text-green-600">
