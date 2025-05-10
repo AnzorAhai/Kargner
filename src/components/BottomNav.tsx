@@ -5,6 +5,7 @@ import Navigation from './Navigation';
 
 export default function BottomNav() {
   const { data: session } = useSession();
-  const role = session?.user?.role || null;
-  return <Navigation role={role} />;
+  const userRole = session?.user?.role;
+  const navigationRole = userRole === 'ADMIN' ? null : userRole || null;
+  return <Navigation role={navigationRole} />;
 } 
