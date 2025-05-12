@@ -48,6 +48,9 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!login|register|api|_next|favicon.ico|manifest.json|icons|uploads|service-worker.js).*)',
+    // Temporarily broaden the matcher for debugging
+    '/:path*', 
+    // Previous matcher:
+    // '/((?!login|register|api|_next|favicon.ico|manifest.json|icons|uploads|service-worker.js).*)',
   ],
 }; 
