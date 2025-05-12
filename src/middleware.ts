@@ -25,22 +25,22 @@ function isPublic(pathname: string) {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  console.log(`[Middleware] Pathname: ${pathname}`); // Логируем путь
+  // console.log(`[Middleware] Pathname: ${pathname}`); // Removed log
 
   // Шаг 1: Пропускаем публичные пути
   if (isPublic(pathname)) {
-    console.log(`[Middleware] Public path, skipping auth check.`);
+    // console.log(`[Middleware] Public path, skipping auth check.`); // Removed log
     return NextResponse.next(); // Пропускаем проверку для публичных путей
   }
 
   // Шаг 2: Проверяем токен для всех остальных путей
-  console.log(`[Middleware] Checking token for protected path...`);
+  // console.log(`[Middleware] Checking token for protected path...`); // Removed log
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-  console.log(`[Middleware] Token: ${JSON.stringify(token)}`); // Логируем результат проверки токена
+  // console.log(`[Middleware] Token: ${JSON.stringify(token)}`); // Removed log
 
   // Шаг 3: Если токена нет (пользователь не авторизован), перенаправляем на /login
   if (!token) {
-    console.log(`[Middleware] No token found, redirecting to /login.`);
+    // console.log(`[Middleware] No token found, redirecting to /login.`); // Removed log
     const loginUrl = new URL('/login', request.url); // Создаем URL для /login
     // Добавляем callbackUrl, чтобы после входа вернуть пользователя обратно
     loginUrl.searchParams.set('callbackUrl', pathname);
@@ -48,7 +48,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Шаг 4: Если токен есть, пропускаем пользователя дальше
-  console.log(`[Middleware] Token found, proceeding.`);
+  // console.log(`[Middleware] Token found, proceeding.`); // Removed log
   return NextResponse.next();
 }
 
