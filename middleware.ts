@@ -2,31 +2,45 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
-export async function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+const PUBLIC_PATHS = [
+  '/login',
+  '/register',
+  '/api',
+  '/_next',
+  '/favicon.ico',
+  '/manifest.json',
+  '/icons',
+  '/uploads',
+  '/service-worker.js'
+];
 
-  // Allow public paths
-  if (
-    pathname.startsWith('/api/auth') ||
-    pathname === '/login' ||
-    pathname === '/register' ||
-    pathname.startsWith('/_next') ||
-    pathname.includes('.')
-  ) {
+function isPublic(pathname: string) {
+  return PUBLIC_PATHS.some((publicPath) =>
+    pathname === publicPath ||
+    pathname.startsWith(publicPath + '/')
+  );
+}
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (isPublic(pathname)) {
     return NextResponse.next();
   }
 
-  // Check auth token
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  // Проверяем наличие токена (авторизации)
+  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
   if (!token) {
-    const loginUrl = req.nextUrl.clone();
-    loginUrl.pathname = '/login';
-    loginUrl.searchParams.set('callbackUrl', pathname);
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('callbackUrl', request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/', '/orders/:path*', '/profile/:path*', '/announcements/:path*'],
+  matcher: [
+    '/((?!login|register|api|_next|favicon.ico|manifest.json|icons|uploads|service-worker.js).*)',
+  ],
 }; 
