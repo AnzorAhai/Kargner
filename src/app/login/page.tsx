@@ -11,6 +11,9 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+  // Get callbackUrl from query parameters
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const callbackUrl = searchParams?.get('callbackUrl') || '/';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +28,8 @@ export default function LoginPage() {
       if (result?.error) {
         setError(result.error);
       } else {
-        router.push('/');
+        // router.push('/'); // Old client-side navigation
+        window.location.href = callbackUrl; // Hard redirect to ensure session is updated
       }
     } catch (err) {
       setError('Произошла ошибка при попытке входа');
