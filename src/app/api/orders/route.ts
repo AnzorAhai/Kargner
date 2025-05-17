@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { OrderStatus, User } from '@prisma/client';
+import { OrderStatus, User, Role as PrismaRole } from '@prisma/client-generated';
 
 // Получение заказов мастера
 export async function GET(request: Request) {
@@ -65,7 +65,7 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json();
-  const { orderId, status, paymentConfirmed, measuredPrice } = body;
+  const { orderId, status, measuredPrice, masterCommissionPaid } = body;
 
   // Логика для Мастера: обновление цены после замера
   if (typeof measuredPrice === 'number' && orderId && session.user.role === 'MASTER') {
@@ -82,13 +82,16 @@ export async function PATCH(request: Request) {
     if (orderToUpdate.status !== OrderStatus.AWAITING_MEASUREMENT) {
       return NextResponse.json({ error: 'Order is not awaiting measurement' }, { status: 400 });
     }
+    if (measuredPrice <= 0) {
+      return NextResponse.json({ error: 'Measured price must be positive' }, { status: 400 });
+    }
 
     try {
       const updatedOrder = await prisma.order.update({
         where: { id: orderId },
         data: {
           measuredPrice: measuredPrice,
-          status: OrderStatus.AWAITING_PAYMENT,
+          status: OrderStatus.AWAITING_MASTER_COMMISSION,
         },
       });
       return NextResponse.json(updatedOrder);
@@ -98,109 +101,110 @@ export async function PATCH(request: Request) {
     }
   }
 
-  // Существующая логика оплаты (потребует адаптации под новый флоу)
-  // Refactored for Intermediary paying Master the measuredPrice
-  if (paymentConfirmed && orderId && session.user.role === 'INTERMEDIARY') {
-    const existingOrder = await prisma.order.findUnique({
-      where: { id: orderId },
+  // Новая логика: Мастер оплачивает комиссию
+  if (masterCommissionPaid && orderId && session.user.role === 'MASTER') {
+    const orderToProcess = await prisma.order.findUnique({
+        where: { id: orderId },
     });
 
-    if (!existingOrder) {
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    if (!orderToProcess) {
+        return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    }
+    if (orderToProcess.masterId !== session.user.id) {
+        return NextResponse.json({ error: 'Forbidden: You are not the master for this order' }, { status: 403 });
+    }
+    if (orderToProcess.status !== OrderStatus.AWAITING_MASTER_COMMISSION) {
+        return NextResponse.json({ error: 'Order is not awaiting master commission payment' }, { status: 400 });
+    }
+    if (typeof orderToProcess.measuredPrice !== 'number' || orderToProcess.measuredPrice <= 0) {
+        return NextResponse.json({ error: 'Valid measured price not found for this order' }, { status: 400 });
     }
 
-    if (existingOrder.mediatorId !== session.user.id) {
-        return NextResponse.json({ error: 'Forbidden: You are not the intermediary for this order' }, { status: 403 });
+    const totalCommission = orderToProcess.measuredPrice * 0.10;
+    const intermediaryShare = totalCommission / 2;
+    // const platformShare = totalCommission - intermediaryShare; // For reference
+
+    const masterUser = await prisma.user.findUnique({ where: { id: session.user.id } });
+    if (!masterUser) {
+        return NextResponse.json({ error: 'Master user not found' }, { status: 404 });
+    }
+    if (masterUser.balance < totalCommission) {
+        return NextResponse.json({ error: 'Insufficient balance for master to pay commission' }, { status: 400 });
     }
 
-    if (existingOrder.status !== OrderStatus.AWAITING_PAYMENT) {
-        return NextResponse.json({ error: 'Order is not awaiting payment' }, { status: 400 });
-    }
-    
-    if (!existingOrder.masterId) { // masterId should exist for an order at this stage
-        return NextResponse.json({ error: 'Master not assigned to this order' }, { status: 400 });
-    }
-
-    const master = await prisma.user.findUnique({ where: { id: existingOrder.masterId } });
-    if (!master) {
-        return NextResponse.json({ error: 'Master user not found for this order' }, { status: 404 });
-    }
-    
-    const paymentAmount = existingOrder.measuredPrice;
-    if (typeof paymentAmount !== 'number' || paymentAmount <= 0) {
-        return NextResponse.json({ error: 'Measured price not set, invalid, or zero for this order' }, { status: 400 });
-    }
-
-    const payingUserFromDb = await prisma.user.findUnique({ where: { id: session.user.id } });
-    if (!payingUserFromDb) {
-        // This should ideally not happen if session.user.id is valid
-        return NextResponse.json({ error: 'Paying user (Intermediary) not found in DB' }, { status: 404 });
-    }
-
-    if (payingUserFromDb.balance < paymentAmount) {
-      return NextResponse.json({ error: 'Insufficient balance for paying user (Intermediary)' }, { status: 400 });
-    }
-    
     try {
-      const updatedOrder = await prisma.$transaction(async (tx) => {
-        // Debit Intermediary
-        await tx.user.update({ 
-          where: { id: session.user.id }, 
-          data: { balance: { decrement: paymentAmount } } 
+        const updatedOrder = await prisma.$transaction(async (tx) => {
+            // Списать комиссию с Мастера
+            await tx.user.update({
+                where: { id: session.user.id },
+                data: { balance: { decrement: totalCommission } },
+            });
+            // Начислить долю Посреднику
+            await tx.user.update({
+                where: { id: orderToProcess.mediatorId },
+                data: { balance: { increment: intermediaryShare } },
+            });
+            // Обновить статус Заказа на COMPLETED
+            return tx.order.update({
+                where: { id: orderId },
+                data: { status: OrderStatus.COMPLETED },
+            });
         });
-        // Credit Master
-        await tx.user.update({ 
-          where: { id: existingOrder.masterId as string }, // masterId is confirmed non-null above
-          data: { balance: { increment: paymentAmount } } 
-        });
-        // Update order status to IN_PROGRESS
-        // The 'commission' field on the order is not modified here, retaining its value from order creation.
-        return tx.order.update({ 
-          where: { id: orderId }, 
-          data: { status: OrderStatus.IN_PROGRESS }
-        });
-      });
-      return NextResponse.json(updatedOrder);
+        return NextResponse.json(updatedOrder);
     } catch (error) {
-        console.error('Payment transaction error (Intermediary to Master):', error);
-        return NextResponse.json({ error: 'Payment transaction failed' }, { status: 500 });
+        console.error('Master commission payment transaction error:', error);
+        return NextResponse.json({ error: 'Master commission payment transaction failed' }, { status: 500 });
     }
   }
 
+  // Общая логика обновления статуса (например, для отмены)
   if (status && orderId) {
-    try {
-      let updatedOrder;
-      if (status === OrderStatus.CANCELLED && session.user.role === 'INTERMEDIARY') {
-        const existingOrderToCancel = await prisma.order.findUnique({ where: { id: orderId } });
-        if (!existingOrderToCancel) {
-          return NextResponse.json({ error: 'Order not found' }, { status: 404 });
-        }
-        if (existingOrderToCancel.status === OrderStatus.COMPLETED || existingOrderToCancel.status === OrderStatus.IN_PROGRESS) {
-             return NextResponse.json({ error: 'Cannot cancel an order that is in progress or completed' }, { status: 400 });
-        }
-
-        await prisma.$transaction([
-          prisma.order.update({ where: { id: orderId }, data: { status: OrderStatus.CANCELLED } }),
-          prisma.announcement.update({ 
-            where: { id: existingOrderToCancel.announcementId }, 
-            data: { status: 'ACTIVE' }
-          })
-        ]);
-        updatedOrder = await prisma.order.findUnique({ where: { id: orderId } });
-      } else {
-        updatedOrder = await prisma.order.update({ 
-            where: { id: orderId }, 
-            data: { status } 
-        });
+    // Убедимся, что разрешены только определенные переходы статусов, если это необходимо
+    // Например, отмена заказа Посредником, если он еще не COMPLETED
+    if (status === OrderStatus.CANCELLED && session.user.role === 'INTERMEDIARY') {
+      const existingOrderToCancel = await prisma.order.findUnique({ where: { id: orderId } });
+      if (!existingOrderToCancel) {
+        return NextResponse.json({ error: 'Order not found' }, { status: 404 });
       }
-      return NextResponse.json(updatedOrder);
-    } catch (error) {
-      console.error('Error updating order status:', error);
-      return NextResponse.json({ error: 'Error updating order status' }, { status: 500 });
+      // Разрешить отмену Посредником только если Заказ не выполнен
+      if (existingOrderToCancel.status === OrderStatus.COMPLETED) {
+           return NextResponse.json({ error: 'Cannot cancel a completed order' }, { status: 400 });
+      }
+      // При отмене заказа, также делаем объявление снова активным
+      try {
+          const cancelledOrder = await prisma.$transaction(async (tx) => {
+            const updated = await tx.order.update({ 
+                where: { id: orderId }, 
+                data: { status: OrderStatus.CANCELLED } 
+            });
+            await tx.announcement.update({ 
+              where: { id: existingOrderToCancel.announcementId }, 
+              data: { status: 'ACTIVE' } // Используем Status, а не OrderStatus
+            });
+            return updated;
+          });
+          return NextResponse.json(cancelledOrder);
+      } catch (error) {
+        console.error('Error cancelling order and reactivating announcement:', error);
+        return NextResponse.json({ error: 'Error cancelling order' }, { status: 500 });
+      }
+    } else {
+        // Для других прямых изменений статуса (если они вообще нужны и разрешены)
+        // Можно добавить больше проверок здесь, кто и какой статус может установить
+        try {
+            const updatedOrder = await prisma.order.update({ 
+                where: { id: orderId }, 
+                data: { status } // Убедитесь, что 'status' здесь - это валидный OrderStatus
+            });
+            return NextResponse.json(updatedOrder);
+        } catch (error) {
+            console.error('Error updating order status directly:', error);
+            return NextResponse.json({ error: 'Error updating order status' }, { status: 500 });
+        }
     }
   }
   
-  return NextResponse.json({ error: 'Invalid request parameters for PATCH' }, { status: 400 });
+  return NextResponse.json({ error: 'Invalid request parameters for PATCH operation' }, { status: 400 });
 }
 
 // Создание заказа посредником (выдача заказа мастеру)

@@ -34,6 +34,7 @@ function AnnouncementPageComponent({ params }: { params: { id: string } }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const viewMode = searchParams.get('view');
+  const previousOrdersTab = searchParams.get('previousTab');
 
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [loading, setLoading] = useState(true);
@@ -225,7 +226,7 @@ function AnnouncementPageComponent({ params }: { params: { id: string } }) {
                 </>
               )}
               <Link
-                href={isOrderViewForMaster ? "/orders" : "/"} // Возврат на страницу заказов если пришли оттуда
+                href={isOrderViewForMaster ? (previousOrdersTab ? `/orders?tab=${encodeURIComponent(previousOrdersTab)}` : '/orders') : "/"}
                 className="text-sm font-medium text-blue-600 hover:text-blue-500"
               >
                 {isOrderViewForMaster ? "← Назад к заказам" : "← Назад к списку"}

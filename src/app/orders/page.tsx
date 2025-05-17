@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import OrderCard from '@/components/OrderCard';
 import { useSession } from 'next-auth/react';
 import { OrderStatus, Role as PrismaRole } from '@prisma/client-generated';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 interface Order {
   id: string;
@@ -38,22 +39,47 @@ interface Order {
 }
 
 type MasterTab = 'measurements' | 'current_master';
-type IntermediaryTab = 'current_intermediary' | 'history_intermediary';
+type IntermediaryTab = 'awaiting_measurement_intermediary' | 'awaiting_master_commission_intermediary' | 'history_intermediary';
 type ActiveTabType = MasterTab | IntermediaryTab;
 
 export default function OrdersPage() {
   const { data: session, status: sessionStatus } = useSession();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(sessionStatus === 'loading');
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<ActiveTabType | null>(null);
 
   useEffect(() => {
-    if (sessionStatus === 'authenticated' && session) {
-      if (!activeTab) {
-        setActiveTab(session.user.role === 'MASTER' ? 'measurements' : 'current_intermediary');
+    const tabFromUrl = searchParams.get('tab') as ActiveTabType | null;
+    const currentRole = session?.user?.role as PrismaRole | undefined;
+
+    if (tabFromUrl) {
+      let isValidTabForRole = false;
+      if (currentRole === PrismaRole.MASTER) {
+        const masterTabs: MasterTab[] = ['measurements', 'current_master'];
+        isValidTabForRole = masterTabs.includes(tabFromUrl as MasterTab);
+      } else if (currentRole === PrismaRole.INTERMEDIARY) {
+        const intermediaryTabs: IntermediaryTab[] = ['awaiting_measurement_intermediary', 'awaiting_master_commission_intermediary', 'history_intermediary'];
+        isValidTabForRole = intermediaryTabs.includes(tabFromUrl as IntermediaryTab);
       }
-      
+
+      if (isValidTabForRole && activeTab !== tabFromUrl) {
+        setActiveTab(tabFromUrl);
+      } else if (!isValidTabForRole && activeTab !== (currentRole === PrismaRole.MASTER ? 'measurements' : 'awaiting_measurement_intermediary')) {
+        const defaultTab = currentRole === PrismaRole.MASTER ? 'measurements' : 'awaiting_measurement_intermediary';
+        if (activeTab !== defaultTab) setActiveTab(defaultTab);
+      }
+    } else if (sessionStatus === 'authenticated' && currentRole && !activeTab) {
+      const defaultTab = currentRole === PrismaRole.MASTER ? 'measurements' : 'awaiting_measurement_intermediary';
+      setActiveTab(defaultTab);
+    }
+  }, [searchParams, session, sessionStatus, activeTab, setActiveTab, router]);
+
+  useEffect(() => {
+    if (sessionStatus === 'authenticated' && session && activeTab) {
       const fetchOrders = async () => {
         try {
           setLoading(true);
@@ -127,18 +153,21 @@ export default function OrdersPage() {
         },
         body: JSON.stringify({ 
           orderId, 
-          paymentConfirmed: true 
+          masterCommissionPaid: true
         }),
       });
 
-      if (!response.ok) throw new Error('Ошибка при оплате комиссии');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Ошибка при оплате комиссии мастером');
+      }
 
       const updatedOrder = await response.json();
       setOrders(orders.map(order => 
         order.id === orderId ? updatedOrder : order
       ));
-    } catch (err) {
-      setError('Не удалось оплатить комиссию');
+    } catch (err: any) {
+      setError(err.message || 'Не удалось обработать оплату комиссии мастером');
       console.error(err);
     }
   };
@@ -149,24 +178,13 @@ export default function OrdersPage() {
     const userRole = session?.user?.role as PrismaRole | undefined;
 
     if (userRole === PrismaRole.MASTER) {
-      const currentMasterStatuses: OrderStatus[] = [
-        OrderStatus.AWAITING_PAYMENT, 
-        OrderStatus.PENDING_CONFIRMATION, 
-        OrderStatus.IN_PROGRESS
-      ];
-
       if (activeTab === 'measurements') return order.status === OrderStatus.AWAITING_MEASUREMENT;
-      if (activeTab === 'current_master') return currentMasterStatuses.includes(order.status);
+      if (activeTab === 'current_master') return order.status === OrderStatus.AWAITING_MASTER_COMMISSION;
     } else if (userRole === PrismaRole.INTERMEDIARY) {
-      const currentIntermediaryStatuses: OrderStatus[] = [
-        OrderStatus.AWAITING_PAYMENT, 
-        OrderStatus.PENDING_CONFIRMATION, 
-        OrderStatus.IN_PROGRESS,          
-        OrderStatus.AWAITING_MEASUREMENT  
-      ];
       const historyIntermediaryStatuses: OrderStatus[] = [OrderStatus.COMPLETED, OrderStatus.CANCELLED];
 
-      if (activeTab === 'current_intermediary') return currentIntermediaryStatuses.includes(order.status);
+      if (activeTab === 'awaiting_measurement_intermediary') return order.status === OrderStatus.AWAITING_MEASUREMENT;
+      if (activeTab === 'awaiting_master_commission_intermediary') return order.status === OrderStatus.AWAITING_MASTER_COMMISSION;
       if (activeTab === 'history_intermediary') return historyIntermediaryStatuses.includes(order.status);
     }
     return false;
@@ -187,31 +205,36 @@ export default function OrdersPage() {
     if (!session?.user) return null;
 
     const userRole = session.user.role as PrismaRole;
+    let currentActiveTab = activeTab;
+    if (!currentActiveTab) {
+        currentActiveTab = userRole === PrismaRole.MASTER ? 'measurements' : 'awaiting_measurement_intermediary';
+    }
 
     if (userRole === PrismaRole.MASTER) {
       const masterTabs: { key: MasterTab; label: string }[] = [
         { key: 'measurements', label: 'Замеры' },
-        { key: 'current_master', label: 'Текущие' },
+        { key: 'current_master', label: 'Ожидает вашей оплаты' },
       ];
       return masterTabs.map(tab => (
         <button
           key={tab.key}
           onClick={() => setActiveTab(tab.key)}
-          className={`flex-1 text-center py-2 text-sm font-medium border-b-2 ${activeTab === tab.key ? 'border-black text-black' : 'border-transparent text-gray-700 hover:text-black'}`}
+          className={`flex-1 text-center py-2 text-sm font-medium border-b-2 ${currentActiveTab === tab.key ? 'border-black text-black' : 'border-transparent text-gray-700 hover:text-black'}`}
         >
           {tab.label}
         </button>
       ));
     } else if (userRole === PrismaRole.INTERMEDIARY) {
       const intermediaryTabs: { key: IntermediaryTab; label: string }[] = [
-        { key: 'current_intermediary', label: 'Текущие' },
+        { key: 'awaiting_measurement_intermediary', label: 'На замерах' },
+        { key: 'awaiting_master_commission_intermediary', label: 'Ожидает оплаты от мастера' },
         { key: 'history_intermediary', label: 'История' },
       ];
       return intermediaryTabs.map(tab => (
         <button
           key={tab.key}
           onClick={() => setActiveTab(tab.key)}
-          className={`flex-1 text-center py-2 text-sm font-medium border-b-2 ${activeTab === tab.key ? 'border-black text-black' : 'border-transparent text-gray-700 hover:text-black'}`}
+          className={`flex-1 text-center py-2 text-sm font-medium border-b-2 ${currentActiveTab === tab.key ? 'border-black text-black' : 'border-transparent text-gray-700 hover:text-black'}`}
         >
           {tab.label}
         </button>
@@ -249,6 +272,7 @@ export default function OrdersPage() {
               onStatusChange={handleStatusChange}
               onPayCommission={handlePayCommission}
               onMeasuredPriceSubmit={handleMeasuredPriceSubmit}
+              activeTab={activeTab ?? (session?.user?.role === PrismaRole.MASTER ? 'measurements' : 'awaiting_measurement_intermediary')}
             />
           ))}
         </div>

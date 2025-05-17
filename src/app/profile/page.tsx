@@ -6,6 +6,7 @@ import EditProfileForm from '@/components/EditProfileForm';
 import WalletSection from '@/components/WalletSection';
 import { useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
+import Link from 'next/link';
 
 interface User {
   id: string;
@@ -151,6 +152,16 @@ export default function ProfilePage() {
             onEdit={handleEdit}
           />
           <WalletSection balance={user.balance} />
+
+          {user.role === 'MASTER' && (
+            <div className="mt-6 text-center">
+              <Link href="/profile/order-history" legacyBehavior>
+                <a className="inline-block px-6 py-3 text-base font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors">
+                  История заказов
+                </a>
+              </Link>
+            </div>
+          )}
         </div>
       </main>
 

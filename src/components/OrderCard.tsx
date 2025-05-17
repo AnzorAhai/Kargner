@@ -43,6 +43,7 @@ interface OrderCardProps {
   onStatusChange: (orderId: string, newStatus: OrderStatus) => void;
   onPayCommission: (orderId: string) => Promise<void>;
   onMeasuredPriceSubmit: (orderId: string, price: number) => Promise<void>;
+  activeTab: string;
 }
 
 export default function OrderCard({ 
@@ -50,7 +51,8 @@ export default function OrderCard({
   currentUserRole,
   onStatusChange, 
   onPayCommission, 
-  onMeasuredPriceSubmit 
+  onMeasuredPriceSubmit,
+  activeTab
 }: OrderCardProps) {
   const { data: session } = useSession();
   const [measuredPriceInput, setMeasuredPriceInput] = useState<string>(order.measuredPrice?.toString() || '');
@@ -60,18 +62,14 @@ export default function OrderCard({
 
   const statusLabels: Record<OrderStatus, string> = {
     [OrderStatus.AWAITING_MEASUREMENT]: 'Ожидает замера',
-    [OrderStatus.AWAITING_PAYMENT]: 'Ожидает оплаты',
-    [OrderStatus.PENDING_CONFIRMATION]: 'Ожидает подтверждения',
-    [OrderStatus.IN_PROGRESS]: 'В работе',
+    [OrderStatus.AWAITING_MASTER_COMMISSION]: 'Ожидает оплаты от мастера',
     [OrderStatus.COMPLETED]: 'Завершен',
     [OrderStatus.CANCELLED]: 'Отменен'
   };
 
   const statusColors: Record<OrderStatus, string> = {
     [OrderStatus.AWAITING_MEASUREMENT]: 'bg-blue-100 text-blue-800',
-    [OrderStatus.AWAITING_PAYMENT]: 'bg-orange-100 text-orange-800',
-    [OrderStatus.PENDING_CONFIRMATION]: 'bg-indigo-100 text-indigo-800',
-    [OrderStatus.IN_PROGRESS]: 'bg-purple-100 text-purple-800',
+    [OrderStatus.AWAITING_MASTER_COMMISSION]: 'bg-yellow-100 text-yellow-800',
     [OrderStatus.COMPLETED]: 'bg-green-100 text-green-800',
     [OrderStatus.CANCELLED]: 'bg-red-100 text-red-800'
   };
@@ -151,31 +149,41 @@ export default function OrderCard({
             </div>
           )}
 
-          {currentUserRole === PrismaRole.INTERMEDIARY && order.status === OrderStatus.AWAITING_PAYMENT && order.measuredPrice && (
-            <div className="mb-3">
-              <div className="text-sm text-gray-700 mb-1">
-                Цена от мастера: <span className="font-semibold text-lg">{order.measuredPrice.toLocaleString('ru-RU')} ₽</span>
-              </div>
-              <button
-                onClick={() => onPayCommission(order.id)}
-                className="w-full py-2 px-4 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
-              >
-                Оплатить (Мастеру: {order.measuredPrice.toLocaleString('ru-RU')} ₽)
-              </button>
+          {currentUserRole === PrismaRole.INTERMEDIARY && order.status === OrderStatus.AWAITING_MASTER_COMMISSION && order.measuredPrice && (
+            <div className="mb-3 p-3 bg-yellow-50 rounded-md border border-yellow-200">
+              <p className="text-sm font-semibold text-yellow-700">Ожидается оплата от мастера.</p>
+              <p className="text-xs text-yellow-600">
+                Общая сумма заказа (от мастера): {order.measuredPrice.toLocaleString('ru-RU')} ₽
+              </p>
+              <p className="text-xs text-yellow-600">
+                Комиссия мастера (10%): {(order.measuredPrice * 0.10).toLocaleString('ru-RU')} ₽
+              </p>
+              <p className="text-xs font-semibold text-green-600">
+                Ваша доля (5%): {(order.measuredPrice * 0.05).toLocaleString('ru-RU')} ₽
+              </p>
             </div>
           )}
 
-          {currentUserRole === PrismaRole.MASTER && order.status === OrderStatus.AWAITING_PAYMENT && order.measuredPrice && (
-            <div className="mb-3">
+          {currentUserRole === PrismaRole.MASTER && order.status === OrderStatus.AWAITING_MASTER_COMMISSION && order.measuredPrice && (
+            <div className="mb-3 p-3 bg-blue-50 rounded-md border border-blue-200">
                 <div className="text-sm text-gray-700 mb-1">
-                    Предложенная вами цена: <span className="font-semibold text-lg text-blue-600">{order.measuredPrice.toLocaleString('ru-RU')} ₽</span>
+                    Цена после замера: <span className="font-semibold text-lg text-blue-600">{order.measuredPrice.toLocaleString('ru-RU')} ₽</span>
                 </div>
-                <p className="text-xs text-gray-500">Ожидается оплата от заказчика (Посредника).</p>
+                <p className="text-xs text-gray-600">
+                  Комиссия платформе (10%): {(order.measuredPrice * 0.10).toLocaleString('ru-RU')} ₽
+                </p>
+                <button
+                  onClick={() => onPayCommission(order.id)}
+                  className="mt-2 w-full py-2 px-4 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                >
+                  Оплатить комиссию и завершить заказ
+                </button>
             </div>
           )}
 
           {! (currentUserRole === PrismaRole.MASTER && order.status === OrderStatus.AWAITING_MEASUREMENT) &&
-           ! (currentUserRole === PrismaRole.INTERMEDIARY && order.status === OrderStatus.AWAITING_PAYMENT && order.measuredPrice) &&
+           ! (currentUserRole === PrismaRole.INTERMEDIARY && order.status === OrderStatus.AWAITING_MASTER_COMMISSION && order.measuredPrice) &&
+           ! (currentUserRole === PrismaRole.MASTER && order.status === OrderStatus.AWAITING_MASTER_COMMISSION && order.measuredPrice) &&
             <div className="flex justify-between items-center">
                 <div className="text-lg font-semibold text-gray-800">
                 {order.measuredPrice ? `${order.measuredPrice.toLocaleString('ru-RU')} ₽ (фикс.)` : `${order.bid.price.toLocaleString('ru-RU')} ₽ (предв.)`}
@@ -189,7 +197,7 @@ export default function OrderCard({
 
   if (isClickable) {
     return (
-      <Link href={`/announcements/${order.announcement.id}?view=order`} className="block hover:shadow-lg transition-shadow duration-200 h-full">
+      <Link href={`/announcements/${order.announcement.id}?view=order&previousTab=${encodeURIComponent(activeTab)}`} className="block hover:shadow-lg transition-shadow duration-200 h-full">
         {cardContent}
       </Link>
     );
