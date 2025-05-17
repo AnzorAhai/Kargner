@@ -93,8 +93,8 @@ export async function PATCH(request: Request) {
           measuredPrice: measuredPrice,
           status: OrderStatus.AWAITING_MASTER_COMMISSION,
         },
-      });
-      return NextResponse.json(updatedOrder);
+    });
+    return NextResponse.json(updatedOrder);
     } catch (error) {
       console.error('Error updating measured price:', error);
       return NextResponse.json({ error: 'Error updating measured price' }, { status: 500 });
@@ -127,7 +127,7 @@ export async function PATCH(request: Request) {
     const masterUser = await prisma.user.findUnique({ where: { id: session.user.id } });
     if (!masterUser) {
         return NextResponse.json({ error: 'Master user not found' }, { status: 404 });
-    }
+  }
     if (masterUser.balance < totalCommission) {
         return NextResponse.json({ error: 'Insufficient balance for master to pay commission' }, { status: 400 });
     }
@@ -196,12 +196,12 @@ export async function PATCH(request: Request) {
                 where: { id: orderId }, 
                 data: { status } // Убедитесь, что 'status' здесь - это валидный OrderStatus
             });
-            return NextResponse.json(updatedOrder);
-        } catch (error) {
+    return NextResponse.json(updatedOrder);
+  } catch (error) {
             console.error('Error updating order status directly:', error);
             return NextResponse.json({ error: 'Error updating order status' }, { status: 500 });
         }
-    }
+  }
   }
   
   return NextResponse.json({ error: 'Invalid request parameters for PATCH operation' }, { status: 400 });
@@ -233,7 +233,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Заказ для этой ставки уже существует' }, { status: 409 });
     }
     
-    const commission = bid.price * 0.1; 
+    const commission = bid.price * 0.1;
 
     const order = await prisma.order.create({
       data: {

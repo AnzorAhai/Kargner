@@ -2,6 +2,13 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import type { Announcement, Bid, User } from '@prisma/client';
+
+// Определим более точный тип для объявления с загруженными связями
+type AnnouncementWithDetails = Announcement & {
+  user: Pick<User, 'id' | 'firstName' | 'lastName' | 'rating' | 'ratingCount'>;
+  bids: Pick<Bid, 'userId' | 'price'>[];
+};
 
 // Получение списка объявлений
 export async function GET(request: Request) {
@@ -22,15 +29,15 @@ export async function GET(request: Request) {
       orderBy: { createdAt: 'desc' }
     });
 
-    const announcements = announcementsFromDb.map(announcement => {
+    const announcements = announcementsFromDb.map((announcement: AnnouncementWithDetails) => {
       let minBidPrice: number | null = null;
       let currentUserBidPrice: number | null = null;
 
       if (announcement.bids && announcement.bids.length > 0) {
-        minBidPrice = Math.min(...announcement.bids.map(b => b.price));
+        minBidPrice = Math.min(...announcement.bids.map((b: Pick<Bid, 'userId' | 'price'>) => b.price));
         
         if (currentUserId && session?.user?.role === 'MASTER') {
-          const userBid = announcement.bids.find(b => b.userId === currentUserId);
+          const userBid = announcement.bids.find((b: Pick<Bid, 'userId' | 'price'>) => b.userId === currentUserId);
           if (userBid) {
             currentUserBidPrice = userBid.price;
           }
@@ -84,7 +91,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const announcement = await prisma.announcement.create({
+    const newAnnouncement = await prisma.announcement.create({
       data: {
         title,
         description,
@@ -98,7 +105,7 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json(announcement);
+    return NextResponse.json(newAnnouncement);
   } catch (error) {
     console.error('Error creating announcement:', error);
     return NextResponse.json(
