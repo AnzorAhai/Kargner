@@ -1,11 +1,10 @@
-'use client';
+"use client";
 export const dynamic = 'force-dynamic';
 
 import React, { useEffect, useState } from 'react';
 import OrderCard from '@/components/OrderCard';
 import { useSession } from 'next-auth/react';
 import { OrderStatus, Role as PrismaRole } from '@prisma/client-generated';
-import { useSearchParams, useRouter } from 'next/navigation';
 
 interface Order {
   id: string;
@@ -45,39 +44,33 @@ type ActiveTabType = MasterTab | IntermediaryTab;
 
 export default function OrdersPage() {
   const { data: session, status: sessionStatus } = useSession();
-  const searchParams = useSearchParams();
-  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<ActiveTabType | null>(null);
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(sessionStatus === 'loading');
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<ActiveTabType | null>(null);
 
   useEffect(() => {
-    const tabFromUrl = searchParams.get('tab') as ActiveTabType | null;
     const currentRole = session?.user?.role as PrismaRole | undefined;
-
+    let tabFromUrl: ActiveTabType | null = null;
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      tabFromUrl = params.get('tab') as ActiveTabType | null;
+    }
+    const masterTabs: ActiveTabType[] = ['measurements', 'current_master'];
+    const intermediaryTabs: ActiveTabType[] = ['awaiting_measurement_intermediary', 'awaiting_master_commission_intermediary', 'history_intermediary'];
+    const defaultTab = currentRole === PrismaRole.MASTER ? 'measurements' : 'awaiting_measurement_intermediary';
     if (tabFromUrl) {
-      let isValidTabForRole = false;
-      if (currentRole === PrismaRole.MASTER) {
-        const masterTabs: MasterTab[] = ['measurements', 'current_master'];
-        isValidTabForRole = masterTabs.includes(tabFromUrl as MasterTab);
-      } else if (currentRole === PrismaRole.INTERMEDIARY) {
-        const intermediaryTabs: IntermediaryTab[] = ['awaiting_measurement_intermediary', 'awaiting_master_commission_intermediary', 'history_intermediary'];
-        isValidTabForRole = intermediaryTabs.includes(tabFromUrl as IntermediaryTab);
-      }
-
-      if (isValidTabForRole && activeTab !== tabFromUrl) {
+      const validTabs = currentRole === PrismaRole.MASTER ? masterTabs : intermediaryTabs;
+      if (validTabs.includes(tabFromUrl)) {
         setActiveTab(tabFromUrl);
-      } else if (!isValidTabForRole && activeTab !== (currentRole === PrismaRole.MASTER ? 'measurements' : 'awaiting_measurement_intermediary')) {
-        const defaultTab = currentRole === PrismaRole.MASTER ? 'measurements' : 'awaiting_measurement_intermediary';
-        if (activeTab !== defaultTab) setActiveTab(defaultTab);
+      } else {
+        setActiveTab(defaultTab);
       }
-    } else if (sessionStatus === 'authenticated' && currentRole && !activeTab) {
-      const defaultTab = currentRole === PrismaRole.MASTER ? 'measurements' : 'awaiting_measurement_intermediary';
+    } else if (sessionStatus === 'authenticated' && currentRole && activeTab !== defaultTab) {
       setActiveTab(defaultTab);
     }
-  }, [searchParams, session, sessionStatus, activeTab, setActiveTab, router]);
+  }, [session, sessionStatus]);
 
   useEffect(() => {
     if (sessionStatus === 'authenticated' && session && activeTab) {
