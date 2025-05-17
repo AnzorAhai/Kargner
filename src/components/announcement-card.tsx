@@ -4,12 +4,26 @@ import { ru } from "date-fns/locale"
 import CountdownTimer from "./CountdownTimer"
 
 interface AnnouncementCardProps {
-  announcement: any
+  announcement: {
+    id: string;
+    title: string;
+    description: string;
+    imageUrl?: string;
+    createdAt: string;
+    price: number;
+  }
 }
 
 export function AnnouncementCard({ announcement }: AnnouncementCardProps) {
   return (
-    <Card>
+    <Card className="overflow-hidden">
+      <div className="relative h-48 w-full">
+        <img
+          src={announcement.imageUrl || '/placeholder.jpg'}
+          alt={announcement.title}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      </div>
       <CardHeader>
         <CardTitle>{announcement.title}</CardTitle>
       </CardHeader>
