@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { BidForm } from '@/components/BidForm';
+import CountdownTimer from '@/components/CountdownTimer';
 
 interface Announcement {
   id: string;
@@ -181,6 +182,11 @@ function AnnouncementPageComponent({ params }: { params: { id: string } }) {
             <h1 className="text-2xl font-bold text-gray-900">
               {announcement.title}
             </h1>
+            {announcement.createdAt && (
+              <div className="mt-1 text-sm text-gray-700">
+                <CountdownTimer createdAt={new Date(announcement.createdAt)} />
+              </div>
+            )}
             <div className="flex items-center space-x-4">
               {session?.user?.id === announcement.user.id && (
                 <>
