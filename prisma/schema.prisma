@@ -69,7 +69,8 @@ model Bid {
 
 model Order {
   id            String    @id @default(cuid())
-  status        Status    @default(PENDING)
+  status        OrderStatus
+  measuredPrice Float?
   commission    Float
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -104,11 +105,22 @@ enum Role {
   ADMIN
 }
 
+// Старый enum Status, используется в Announcement и Bid
 enum Status {
   PENDING
   ACTIVE
   COMPLETED
   CANCELLED
+}
+
+// Новый enum специально для Заказов
+enum OrderStatus {
+  AWAITING_MEASUREMENT // Ожидает замера и указания цены мастером
+  AWAITING_PAYMENT     // Ожидает оплаты комиссии посредником (после указания цены мастером)
+  PENDING_CONFIRMATION // Ожидает подтверждения выполнения мастером (после оплаты посредником)
+  IN_PROGRESS          // Мастер подтвердил, заказ в работе
+  COMPLETED            // Заказ выполнен
+  CANCELLED            // Заказ отменен
 }
 
 // Push subscription storage for PWA notifications

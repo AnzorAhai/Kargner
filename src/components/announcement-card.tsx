@@ -16,7 +16,7 @@ interface AnnouncementCardProps {
 
 export function AnnouncementCard({ announcement }: AnnouncementCardProps) {
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden dark:bg-background">
       <div className="relative h-48 w-full">
         <img
           src={announcement.imageUrl || '/placeholder.jpg'}
