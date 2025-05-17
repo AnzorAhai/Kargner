@@ -1,16 +1,28 @@
-import { Order, Announcement, Bid, User as PrismaUser, OrderStatus as PrismaOrderStatus, Role as PrismaRole } from '@prisma/client-generated';
+import {
+    Order as PrismaOrder, // Rename to avoid conflict if Order is defined below
+    OrderStatus as PrismaOrderStatusEnum, // Rename enum import
+    Role as PrismaRoleEnum, // Rename enum import
+    // Import other Prisma types if needed by OrderWithRelations, e.g., Announcement, Bid, User
+    User as PrismaUser,
+    Announcement as PrismaAnnouncement,
+    Bid as PrismaBid
+} from '@prisma/client-generated';
 
-// Re-export Prisma enums under potentially simpler names if needed, or use them directly.
-// For clarity, let's use their Prisma names directly in this file and export them.
-export type OrderStatus = PrismaOrderStatus;
-export type Role = PrismaRole;
+// Export the enums directly
+export const OrderStatus = PrismaOrderStatusEnum;
+export const Role = PrismaRoleEnum;
 
-// Define a simpler User type for relations to avoid deep nesting or circular dependencies if not needed
+// Export types for type annotations
+export type OrderStatusType = PrismaOrderStatusEnum;
+export type RoleType = PrismaRoleEnum;
+
+// Define simpler related types if the full Prisma types are too complex or cause circular dependencies
 interface RelatedUser {
   id: string;
   firstName: string | null;
   lastName: string | null;
   phone: string | null;
+  // Add other fields if needed by OrderCard or other components
 }
 
 interface RelatedAnnouncement {
@@ -25,16 +37,25 @@ interface RelatedAnnouncement {
 }
 
 interface RelatedBid {
+  id: string; // Assuming Bid has an id
   price: number;
+  // Add other fields if needed
 }
 
-// This is the main type we'll use on the frontend for orders with their relations
-export interface OrderWithRelations extends Order {
+// Define the main Order type used on the frontend, extending Prisma's Order type
+// Make sure this OrderWithRelations is compatible with what OrderCard expects
+export interface OrderWithRelations extends PrismaOrder {
   announcement: RelatedAnnouncement;
-  bid: RelatedBid | null; // Bid can be null if not applicable in some contexts, though usually present for an order
-  master: RelatedUser; // Master assigned to the order
-  // Add other relations if they are included in API responses and needed by the frontend
-  // Ensure all fields expected by OrderCard are present or compatible.
-  // For instance, OrderCard uses order.commission, order.masterId, order.mediatorId.
-  // These are part of the base 'Order' type from Prisma, so they should be inherited.
+  bid: RelatedBid | null; 
+  master: RelatedUser;     // Master user assigned to the order
+  status: OrderStatusType; // Use the exported type
+  // Ensure all fields expected by OrderCard are present here or in PrismaOrder
+  // e.g., OrderCard uses order.commission, order.masterId, order.mediatorId
+  // These should be part of PrismaOrder if correctly defined in schema.prisma
+}
+
+// Example of a more specific User type if needed elsewhere, not directly for OrderWithRelations
+export interface UserProfile extends PrismaUser {
+    role: RoleType; // Use the exported type
+    // additional fields or relations for a user profile page
 } 

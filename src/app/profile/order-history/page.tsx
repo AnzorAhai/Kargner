@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { OrderWithRelations, Role, OrderStatus } from '@/types/order';
+import { OrderWithRelations, Role, RoleType, OrderStatus, OrderStatusType } from '@/types/order';
 import OrderCard from '@/components/OrderCard'; // Assuming OrderCard can be reused
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -16,7 +16,7 @@ const OrderHistoryPage = () => {
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login');
-    } else if (status === 'authenticated' && session?.user?.role === Role.MASTER) {
+    } else if (status === 'authenticated' && (session?.user?.role as RoleType) === Role.MASTER) {
       const fetchCompletedOrders = async () => {
         setLoading(true);
         setError(null);
@@ -63,10 +63,10 @@ const OrderHistoryPage = () => {
           {orders.map((order) => (
             <OrderCard 
               key={order.id} 
-              order={order as any} // Casting for now, should ensure types are compatible
-              currentUserRole={session.user.role as Role}
-              onStatusChange={() => { /* No action in history */ }}
-              onPayCommission={async () => { /* No action in history */ }}
+              order={order}
+              currentUserRole={session.user.role as RoleType}
+              onStatusChange={() => { /* No action needed in history */ }}
+              onPayCommission={async () => { /* No action needed in history */ }}
               onMeasuredPriceSubmit={async () => { /* No action in history */ }}
               activeTab="history"
             />
