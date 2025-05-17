@@ -46,7 +46,7 @@ interface RelatedBid {
 // Make sure this OrderWithRelations is compatible with what OrderCard expects
 export interface OrderWithRelations extends PrismaOrder {
   announcement: RelatedAnnouncement;
-  bid: RelatedBid | null; 
+  bid: RelatedBid; 
   master: RelatedUser;     // Master user assigned to the order
   status: OrderStatusType; // Use the exported type
   // Ensure all fields expected by OrderCard are present here or in PrismaOrder
