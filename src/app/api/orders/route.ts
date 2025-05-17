@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { OrderStatus, User, Role as PrismaRole, PrismaClient } from '@prisma/client-generated';
+import { OrderStatus, User, Role as PrismaRole } from '@prisma/client-generated';
 
 // Получение заказов мастера
 export async function GET(request: Request) {
@@ -133,7 +133,7 @@ export async function PATCH(request: Request) {
     }
 
     try {
-        const updatedOrder = await prisma.$transaction(async (tx: PrismaClient) => {
+        const updatedOrder = await prisma.$transaction(async (tx) => {
             // Списать комиссию с Мастера
             await tx.user.update({
                 where: { id: session.user.id },
@@ -172,7 +172,7 @@ export async function PATCH(request: Request) {
       }
       // При отмене заказа, также делаем объявление снова активным
       try {
-          const cancelledOrder = await prisma.$transaction(async (tx: PrismaClient) => {
+          const cancelledOrder = await prisma.$transaction(async (tx) => {
             const updated = await tx.order.update({ 
                 where: { id: orderId }, 
                 data: { status: { set: OrderStatus.CANCELLED } } 
