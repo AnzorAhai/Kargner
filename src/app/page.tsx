@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
+import { AnnouncementCard } from '@/components/announcement-card';
 
 interface Announcement {
   id: string;
@@ -117,48 +118,9 @@ export default function HomePage() {
                 <Link
                   key={announcement.id}
                   href={`/announcements/${announcement.id}`}
-                  className="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow duration-200"
+                  className="block hover:shadow-lg transition-shadow duration-200 rounded-lg"
                 >
-                  <div className="relative h-48">
-                    <img
-                      src={announcement.imageUrl || '/placeholder.jpg'}
-                      alt={announcement.title}
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="px-4 py-5 sm:p-6">
-                    <h3 className="text-lg font-medium text-gray-900">
-                      {announcement.title}
-                    </h3>
-                    <p className="mt-1 text-sm text-gray-500 truncate">
-                      {announcement.description}
-                    </p>
-                    <div className="mt-4">
-                      {session?.user?.role === 'MASTER' ? (
-                        announcement.currentUserBidPrice !== null ? (
-                          announcement.minBidPrice !== null && announcement.currentUserBidPrice <= announcement.minBidPrice ? (
-                            <span className="text-green-600 text-sm font-semibold">
-                              Вы указали {announcement.currentUserBidPrice} ₽. Ваша ставка лидирует!
-                            </span>
-                          ) : (
-                            <span className="text-red-600 text-sm font-semibold">
-                              Вы указали {announcement.currentUserBidPrice} ₽. Вашу ставку перебили!
-                            </span>
-                          )
-                        ) : (
-                          <span className="text-gray-500 text-sm">
-                            Вы ещё не указали цену
-                          </span>
-                        )
-                      ) : session?.user?.role === 'ADMIN' ? (
-                        <div className="flex items-center justify-between text-sm text-gray-500">
-                          <span>Автор: {announcement.user.firstName} {announcement.user.lastName}</span>
-                        </div>
-                      ) : (
-                        <div className="h-5"></div>
-                      )}
-                    </div>
-                  </div>
+                  <AnnouncementCard announcement={announcement} />
                 </Link>
               ))}
             </div>
