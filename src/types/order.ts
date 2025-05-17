@@ -19,20 +19,20 @@ export type RoleType = PrismaRoleEnum;
 // Define simpler related types if the full Prisma types are too complex or cause circular dependencies
 interface RelatedUser {
   id: string;
-  firstName: string | null;
-  lastName: string | null;
-  phone: string | null;
+  firstName: string;
+  lastName: string;
+  phone: string;
   // Add other fields if needed by OrderCard or other components
 }
 
 interface RelatedAnnouncement {
   id: string;
   title: string;
-  description: string | null;
-  address: string | null;
-  imageUrl: string | null;
-  clientName: string | null;
-  clientPhone: string | null;
+  description: string;
+  address: string;
+  imageUrl: string;
+  clientName: string;
+  clientPhone: string;
   user: RelatedUser; // Intermediary who created the announcement
 }
 
