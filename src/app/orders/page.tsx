@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import OrderCard from '@/components/OrderCard';
 import { useSession } from 'next-auth/react';
 import { OrderStatus, Role as PrismaRole } from '@prisma/client-generated';
+import { useRouter } from 'next/navigation';
 
 interface Order {
   id: string;
@@ -45,6 +46,7 @@ type ActiveTabType = MasterTab | IntermediaryTab;
 export default function OrdersPage() {
   const { data: session, status: sessionStatus } = useSession();
   const [activeTab, setActiveTab] = useState<ActiveTabType | null>(null);
+  const router = useRouter();
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(sessionStatus === 'loading');
@@ -138,32 +140,8 @@ export default function OrdersPage() {
     }
   };
 
-  const handlePayCommission = async (orderId: string) => {
-    try {
-      const response = await fetch('/api/orders', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          orderId, 
-          masterCommissionPaid: true
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Ошибка при оплате комиссии мастером');
-      }
-
-      const updatedOrder = await response.json();
-      setOrders(orders.map(order => 
-        order.id === orderId ? updatedOrder : order
-      ));
-    } catch (err: any) {
-      setError(err.message || 'Не удалось обработать оплату комиссии мастером');
-      console.error(err);
-    }
+  const handlePayCommission = async (orderId: string): Promise<void> => {
+    router.push(`/payment?orderId=${orderId}`);
   };
 
   const filteredOrders = orders.filter(order => {
