@@ -37,7 +37,7 @@ interface Order {
   } | null;
 }
 
-type MasterTab = 'measurements' | 'current_master' | 'history_master';
+type MasterTab = 'measurements' | 'current_master';
 type IntermediaryTab = 'current_intermediary' | 'history_intermediary';
 type ActiveTabType = MasterTab | IntermediaryTab;
 
@@ -154,11 +154,9 @@ export default function OrdersPage() {
         OrderStatus.PENDING_CONFIRMATION, 
         OrderStatus.IN_PROGRESS
       ];
-      const historyMasterStatuses: OrderStatus[] = [OrderStatus.COMPLETED, OrderStatus.CANCELLED];
 
       if (activeTab === 'measurements') return order.status === OrderStatus.AWAITING_MEASUREMENT;
       if (activeTab === 'current_master') return currentMasterStatuses.includes(order.status);
-      if (activeTab === 'history_master') return historyMasterStatuses.includes(order.status);
     } else if (userRole === PrismaRole.INTERMEDIARY) {
       const currentIntermediaryStatuses: OrderStatus[] = [
         OrderStatus.AWAITING_PAYMENT, 
@@ -194,7 +192,6 @@ export default function OrdersPage() {
       const masterTabs: { key: MasterTab; label: string }[] = [
         { key: 'measurements', label: 'Замеры' },
         { key: 'current_master', label: 'Текущие' },
-        { key: 'history_master', label: 'История' },
       ];
       return masterTabs.map(tab => (
         <button

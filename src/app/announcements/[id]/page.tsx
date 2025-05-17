@@ -43,6 +43,7 @@ function AnnouncementPageComponent({ params }: { params: { id: string } }) {
   const [isEditingBid, setIsEditingBid] = useState(false);
   const [bidsData, setBidsData] = useState<Announcement['bids']>([]);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [overallAssignmentLock, setOverallAssignmentLock] = useState(false);
 
   const isOrderViewForMaster = session?.user?.role === 'MASTER' && viewMode === 'order';
 
@@ -100,6 +101,11 @@ function AnnouncementPageComponent({ params }: { params: { id: string } }) {
   }, [params.id, status]); // Re-fetch if session status changes
 
   const handleAssign = async (bid: { id: string; price: number; user: { id: string; firstName: string; lastName: string } }) => {
+    if (overallAssignmentLock) {
+      console.warn('Assignment process is already locked. New assignment attempt ignored.');
+      return;
+    }
+    setOverallAssignmentLock(true);
     setAssigningBidId(bid.id);
     try {
       const res = await fetch('/api/orders', {
@@ -118,6 +124,7 @@ function AnnouncementPageComponent({ params }: { params: { id: string } }) {
       alert(err.message);
     } finally {
       setAssigningBidId(null);
+      setOverallAssignmentLock(false);
     }
   };
   
@@ -308,7 +315,7 @@ function AnnouncementPageComponent({ params }: { params: { id: string } }) {
                             </span>
                             <button
                               onClick={() => handleAssign(bid)}
-                              disabled={assigningBidId === bid.id || (announcement && announcement.status === 'CANCELLED')}
+                              disabled={overallAssignmentLock || (announcement && announcement.status === 'CANCELLED')}
                               className="px-3 py-1 bg-green-600 text-white rounded disabled:opacity-50"
                             >
                               {assigningBidId === bid.id ? 'Назначение...' : 'Назначить'}
