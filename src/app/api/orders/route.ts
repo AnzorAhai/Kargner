@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { OrderStatus, User, Role as PrismaRole } from '@prisma/client-generated';
+import { OrderStatus, User, Role as PrismaRole, PrismaClient } from '@prisma/client-generated';
 
 // Получение заказов мастера
 export async function GET(request: Request) {
@@ -91,10 +91,10 @@ export async function PATCH(request: Request) {
         where: { id: orderId },
         data: {
           measuredPrice: measuredPrice,
-          status: OrderStatus.AWAITING_MASTER_COMMISSION,
+          status: { set: OrderStatus.AWAITING_MASTER_COMMISSION },
         },
-    });
-    return NextResponse.json(updatedOrder);
+      });
+      return NextResponse.json(updatedOrder);
     } catch (error) {
       console.error('Error updating measured price:', error);
       return NextResponse.json({ error: 'Error updating measured price' }, { status: 500 });
@@ -133,7 +133,7 @@ export async function PATCH(request: Request) {
     }
 
     try {
-        const updatedOrder = await prisma.$transaction(async (tx) => {
+        const updatedOrder = await prisma.$transaction(async (tx: PrismaClient) => {
             // Списать комиссию с Мастера
             await tx.user.update({
                 where: { id: session.user.id },
@@ -147,7 +147,7 @@ export async function PATCH(request: Request) {
             // Обновить статус Заказа на COMPLETED
             return tx.order.update({
                 where: { id: orderId },
-                data: { status: OrderStatus.COMPLETED },
+                data: { status: { set: OrderStatus.COMPLETED } },
             });
         });
         return NextResponse.json(updatedOrder);
@@ -172,10 +172,10 @@ export async function PATCH(request: Request) {
       }
       // При отмене заказа, также делаем объявление снова активным
       try {
-          const cancelledOrder = await prisma.$transaction(async (tx) => {
+          const cancelledOrder = await prisma.$transaction(async (tx: PrismaClient) => {
             const updated = await tx.order.update({ 
                 where: { id: orderId }, 
-                data: { status: OrderStatus.CANCELLED } 
+                data: { status: { set: OrderStatus.CANCELLED } } 
             });
             await tx.announcement.update({ 
               where: { id: existingOrderToCancel.announcementId }, 
@@ -194,7 +194,7 @@ export async function PATCH(request: Request) {
         try {
             const updatedOrder = await prisma.order.update({ 
                 where: { id: orderId }, 
-                data: { status } // Убедитесь, что 'status' здесь - это валидный OrderStatus
+                data: { status: { set: status } } 
             });
     return NextResponse.json(updatedOrder);
   } catch (error) {
