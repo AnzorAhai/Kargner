@@ -289,7 +289,7 @@ function AnnouncementPageComponent({ params }: { params: { id: string } }) {
               </div>
             ) : (
               <div className="bg-white shadow-lg rounded-lg p-6">
-                {bidsData.length > 0 ? (
+                {announcement && announcement.status !== 'CANCELLED' && bidsData.length > 0 ? (
                   <div className="space-y-4">
                     {bidsData
                       .slice()
@@ -308,7 +308,7 @@ function AnnouncementPageComponent({ params }: { params: { id: string } }) {
                             </span>
                             <button
                               onClick={() => handleAssign(bid)}
-                              disabled={assigningBidId === bid.id}
+                              disabled={assigningBidId === bid.id || (announcement && announcement.status === 'CANCELLED')}
                               className="px-3 py-1 bg-green-600 text-white rounded disabled:opacity-50"
                             >
                               {assigningBidId === bid.id ? 'Назначение...' : 'Назначить'}
@@ -318,7 +318,13 @@ function AnnouncementPageComponent({ params }: { params: { id: string } }) {
                       ))}
                   </div>
                 ) : (
-                  <p className="text-gray-900">Ставок ещё нет</p>
+                  <p className="text-gray-900">
+                    {bidsData.length === 0 && (announcement && announcement.status !== 'CANCELLED') 
+                      ? 'Ставок ещё нет.' 
+                      : (announcement && announcement.status === 'CANCELLED') 
+                        ? 'Исполнитель уже назначен или объявление неактивно.' 
+                        : 'Нет доступных ставок или объявление закрыто.'}
+                  </p>
                 )}
               </div>
             )}
