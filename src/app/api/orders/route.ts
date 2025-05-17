@@ -99,49 +99,70 @@ export async function PATCH(request: Request) {
   }
 
   // Существующая логика оплаты (потребует адаптации под новый флоу)
-  if (paymentConfirmed && orderId) {
+  // Refactored for Intermediary paying Master the measuredPrice
+  if (paymentConfirmed && orderId && session.user.role === 'INTERMEDIARY') {
     const existingOrder = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { bid: true }
     });
 
     if (!existingOrder) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    const master = await prisma.user.findUnique({ where: { id: existingOrder.masterId as string } });
-    const payingUser = await prisma.user.findUnique({ where: { id: session.user.id }});
-
-    if (!master) return NextResponse.json({ error: 'Master not found' }, { status: 404 });
-    if (!payingUser) return NextResponse.json({ error: 'Paying user not found'}, { status: 404});
-    
-    const paymentAmount = existingOrder.measuredPrice;
-    if (typeof paymentAmount !== 'number') {
-        return NextResponse.json({ error: 'Measured price not set or invalid' }, { status: 400 });
+    if (existingOrder.mediatorId !== session.user.id) {
+        return NextResponse.json({ error: 'Forbidden: You are not the intermediary for this order' }, { status: 403 });
     }
 
-    if (payingUser.balance < paymentAmount) {
-      return NextResponse.json({ error: 'Insufficient balance for paying user' }, { status: 400 });
+    if (existingOrder.status !== OrderStatus.AWAITING_PAYMENT) {
+        return NextResponse.json({ error: 'Order is not awaiting payment' }, { status: 400 });
+    }
+    
+    if (!existingOrder.masterId) { // masterId should exist for an order at this stage
+        return NextResponse.json({ error: 'Master not assigned to this order' }, { status: 400 });
+    }
+
+    const master = await prisma.user.findUnique({ where: { id: existingOrder.masterId } });
+    if (!master) {
+        return NextResponse.json({ error: 'Master user not found for this order' }, { status: 404 });
+    }
+    
+    const paymentAmount = existingOrder.measuredPrice;
+    if (typeof paymentAmount !== 'number' || paymentAmount <= 0) {
+        return NextResponse.json({ error: 'Measured price not set, invalid, or zero for this order' }, { status: 400 });
+    }
+
+    const payingUserFromDb = await prisma.user.findUnique({ where: { id: session.user.id } });
+    if (!payingUserFromDb) {
+        // This should ideally not happen if session.user.id is valid
+        return NextResponse.json({ error: 'Paying user (Intermediary) not found in DB' }, { status: 404 });
+    }
+
+    if (payingUserFromDb.balance < paymentAmount) {
+      return NextResponse.json({ error: 'Insufficient balance for paying user (Intermediary)' }, { status: 400 });
     }
     
     try {
       const updatedOrder = await prisma.$transaction(async (tx) => {
+        // Debit Intermediary
         await tx.user.update({ 
           where: { id: session.user.id }, 
           data: { balance: { decrement: paymentAmount } } 
         });
+        // Credit Master
         await tx.user.update({ 
-          where: { id: existingOrder.masterId as string }, 
+          where: { id: existingOrder.masterId as string }, // masterId is confirmed non-null above
           data: { balance: { increment: paymentAmount } } 
         });
+        // Update order status to IN_PROGRESS
+        // The 'commission' field on the order is not modified here, retaining its value from order creation.
         return tx.order.update({ 
           where: { id: orderId }, 
-          data: { status: OrderStatus.PENDING_CONFIRMATION, commission: 0 }
+          data: { status: OrderStatus.IN_PROGRESS }
         });
       });
       return NextResponse.json(updatedOrder);
     } catch (error) {
-        console.error('Payment transaction error:', error);
+        console.error('Payment transaction error (Intermediary to Master):', error);
         return NextResponse.json({ error: 'Payment transaction failed' }, { status: 500 });
     }
   }

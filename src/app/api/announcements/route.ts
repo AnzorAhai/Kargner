@@ -49,7 +49,7 @@ export async function GET(request: Request) {
       };
     });
 
-    console.log('Processed announcements for list:', announcements);
+    // console.log('Processed announcements for list:', announcements); // Оставим для отладки, если понадобится
     return NextResponse.json(announcements);
   } catch (error) {
     console.error('Error fetching announcements:', error);
@@ -57,8 +57,6 @@ export async function GET(request: Request) {
       { error: 'Ошибка при получении объявлений' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -107,7 +105,5 @@ export async function POST(request: Request) {
       { error: 'Ошибка при создании объявления' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 } 

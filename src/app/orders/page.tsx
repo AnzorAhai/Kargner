@@ -3,10 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import OrderCard from '@/components/OrderCard';
 import { useSession } from 'next-auth/react';
+import { OrderStatus, Role as PrismaRole } from '@prisma/client-generated';
 
 interface Order {
   id: string;
-  status: 'PENDING' | 'ACCEPTED' | 'COMPLETED' | 'CANCELLED';
+  status: OrderStatus;
+  measuredPrice?: number | null;
   commission: number;
   announcement: {
     id: string;
@@ -35,15 +37,23 @@ interface Order {
   } | null;
 }
 
+type MasterTab = 'measurements' | 'current_master' | 'history_master';
+type IntermediaryTab = 'current_intermediary' | 'history_intermediary';
+type ActiveTabType = MasterTab | IntermediaryTab;
+
 export default function OrdersPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(status === 'loading');
+  const [loading, setLoading] = useState(sessionStatus === 'loading');
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'current' | 'history'>('current');
+  const [activeTab, setActiveTab] = useState<ActiveTabType | null>(null);
 
   useEffect(() => {
-    if (status === 'authenticated' && session) {
+    if (sessionStatus === 'authenticated' && session) {
+      if (!activeTab) {
+        setActiveTab(session.user.role === 'MASTER' ? 'measurements' : 'current_intermediary');
+      }
+      
       const fetchOrders = async () => {
         try {
           setLoading(true);
@@ -62,17 +72,38 @@ export default function OrdersPage() {
       };
 
       fetchOrders();
+    } else if (sessionStatus === 'unauthenticated') {
+      setLoading(false);
     }
-  }, [session, status]);
+  }, [session, sessionStatus, activeTab]);
 
-  const handleStatusChange = async (orderId: string, status: string) => {
+  const handleMeasuredPriceSubmit = async (orderId: string, price: number) => {
+    try {
+      const response = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, measuredPrice: price }),
+      });
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Ошибка при обновлении цены');
+      }
+      const updatedOrder = await response.json();
+      setOrders(orders.map(order => order.id === orderId ? { ...order, ...updatedOrder } : order));
+    } catch (err: any) {
+      setError(err.message || 'Не удалось обновить цену');
+      console.error(err);
+    }
+  };
+
+  const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
     try {
       const response = await fetch('/api/orders', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ orderId, status }),
+        body: JSON.stringify({ orderId, status: newStatus }),
       });
 
       if (!response.ok) throw new Error('Ошибка при обновлении статуса');
@@ -89,7 +120,6 @@ export default function OrdersPage() {
 
   const handlePayCommission = async (orderId: string) => {
     try {
-      // TODO: Интеграция с платежной системой
       const response = await fetch('/api/orders', {
         method: 'PATCH',
         headers: {
@@ -113,14 +143,38 @@ export default function OrdersPage() {
     }
   };
 
-  // Filter orders based on active tab: current = PENDING or ACCEPTED, history = COMPLETED or CANCELLED
-  const filteredOrders = orders.filter(order => 
-    activeTab === 'current'
-      ? order.status === 'PENDING' || order.status === 'ACCEPTED'
-      : order.status === 'COMPLETED' || order.status === 'CANCELLED'
-  );
+  const filteredOrders = orders.filter(order => {
+    if (!activeTab) return false;
 
-  if (status === 'loading' || loading) {
+    const userRole = session?.user?.role as PrismaRole | undefined;
+
+    if (userRole === PrismaRole.MASTER) {
+      const currentMasterStatuses: OrderStatus[] = [
+        OrderStatus.AWAITING_PAYMENT, 
+        OrderStatus.PENDING_CONFIRMATION, 
+        OrderStatus.IN_PROGRESS
+      ];
+      const historyMasterStatuses: OrderStatus[] = [OrderStatus.COMPLETED, OrderStatus.CANCELLED];
+
+      if (activeTab === 'measurements') return order.status === OrderStatus.AWAITING_MEASUREMENT;
+      if (activeTab === 'current_master') return currentMasterStatuses.includes(order.status);
+      if (activeTab === 'history_master') return historyMasterStatuses.includes(order.status);
+    } else if (userRole === PrismaRole.INTERMEDIARY) {
+      const currentIntermediaryStatuses: OrderStatus[] = [
+        OrderStatus.AWAITING_PAYMENT, 
+        OrderStatus.PENDING_CONFIRMATION, 
+        OrderStatus.IN_PROGRESS,          
+        OrderStatus.AWAITING_MEASUREMENT  
+      ];
+      const historyIntermediaryStatuses: OrderStatus[] = [OrderStatus.COMPLETED, OrderStatus.CANCELLED];
+
+      if (activeTab === 'current_intermediary') return currentIntermediaryStatuses.includes(order.status);
+      if (activeTab === 'history_intermediary') return historyIntermediaryStatuses.includes(order.status);
+    }
+    return false;
+  });
+
+  if (sessionStatus === 'loading' || loading || !activeTab) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -130,6 +184,44 @@ export default function OrdersPage() {
       </div>
     );
   }
+
+  const renderTabs = () => {
+    if (!session?.user) return null;
+
+    const userRole = session.user.role as PrismaRole;
+
+    if (userRole === PrismaRole.MASTER) {
+      const masterTabs: { key: MasterTab; label: string }[] = [
+        { key: 'measurements', label: 'Замеры' },
+        { key: 'current_master', label: 'Текущие' },
+        { key: 'history_master', label: 'История' },
+      ];
+      return masterTabs.map(tab => (
+        <button
+          key={tab.key}
+          onClick={() => setActiveTab(tab.key)}
+          className={`flex-1 text-center py-2 text-sm font-medium border-b-2 ${activeTab === tab.key ? 'border-black text-black' : 'border-transparent text-gray-700 hover:text-black'}`}
+        >
+          {tab.label}
+        </button>
+      ));
+    } else if (userRole === PrismaRole.INTERMEDIARY) {
+      const intermediaryTabs: { key: IntermediaryTab; label: string }[] = [
+        { key: 'current_intermediary', label: 'Текущие' },
+        { key: 'history_intermediary', label: 'История' },
+      ];
+      return intermediaryTabs.map(tab => (
+        <button
+          key={tab.key}
+          onClick={() => setActiveTab(tab.key)}
+          className={`flex-1 text-center py-2 text-sm font-medium border-b-2 ${activeTab === tab.key ? 'border-black text-black' : 'border-transparent text-gray-700 hover:text-black'}`}
+        >
+          {tab.label}
+        </button>
+      ));
+    }
+    return null;
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 text-black">
@@ -142,21 +234,9 @@ export default function OrdersPage() {
       </header>
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        {/* Tabs for switching between Current and History */}
         <div className="mb-4 border-b border-gray-200">
           <nav className="flex w-full">
-            <button
-              onClick={() => setActiveTab('current')}
-              className={`flex-1 text-center py-2 text-sm font-medium border-b-2 ${activeTab === 'current' ? 'border-black text-black' : 'border-transparent text-gray-700 hover:text-black'}`}
-            >
-              Текущие
-            </button>
-            <button
-              onClick={() => setActiveTab('history')}
-              className={`flex-1 text-center py-2 text-sm font-medium border-b-2 ${activeTab === 'history' ? 'border-black text-black' : 'border-transparent text-gray-700 hover:text-black'}`}
-            >
-              История заказов
-            </button>
+            {renderTabs()}
           </nav>
         </div>
         {error && (
@@ -168,8 +248,10 @@ export default function OrdersPage() {
             <OrderCard
               key={order.id}
               order={order}
+              currentUserRole={session?.user?.role as PrismaRole | undefined}
               onStatusChange={handleStatusChange}
               onPayCommission={handlePayCommission}
+              onMeasuredPriceSubmit={handleMeasuredPriceSubmit}
             />
           ))}
         </div>
