@@ -173,7 +173,11 @@ export default function OrderCard({
                   Комиссия платформе (10%): {(order.measuredPrice * 0.10).toLocaleString('ru-RU')} ₽
                 </p>
                 <button
-                  onClick={() => onPayCommission(order.id)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onPayCommission(order.id);
+                  }}
                   className="mt-2 w-full py-2 px-4 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
                 >
                   Оплатить комиссию и завершить заказ
