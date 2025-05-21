@@ -153,7 +153,7 @@ export default function ProfilePage() {
           />
           <WalletSection balance={user.balance} />
 
-          {user.role === 'MASTER' && (
+          {(user.role === 'MASTER' || user.role === 'INTERMEDIARY') && (
             <div className="mt-6 text-center">
               <Link href="/profile/order-history" legacyBehavior>
                 <a className="inline-block px-6 py-3 text-base font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors">

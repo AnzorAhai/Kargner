@@ -40,7 +40,7 @@ interface Order {
 }
 
 type MasterTab = 'measurements' | 'current_master';
-type IntermediaryTab = 'awaiting_measurement_intermediary' | 'awaiting_master_commission_intermediary' | 'history_intermediary';
+type IntermediaryTab = 'awaiting_measurement_intermediary' | 'awaiting_master_commission_intermediary';
 type ActiveTabType = MasterTab | IntermediaryTab;
 
 export default function OrdersPage() {
@@ -60,7 +60,7 @@ export default function OrdersPage() {
       tabFromUrl = params.get('tab') as ActiveTabType | null;
     }
     const masterTabs: ActiveTabType[] = ['measurements', 'current_master'];
-    const intermediaryTabs: ActiveTabType[] = ['awaiting_measurement_intermediary', 'awaiting_master_commission_intermediary', 'history_intermediary'];
+    const intermediaryTabs: ActiveTabType[] = ['awaiting_measurement_intermediary', 'awaiting_master_commission_intermediary'];
     const defaultTab = currentRole === PrismaRole.MASTER ? 'measurements' : 'awaiting_measurement_intermediary';
     if (tabFromUrl) {
       const validTabs = currentRole === PrismaRole.MASTER ? masterTabs : intermediaryTabs;
@@ -153,11 +153,8 @@ export default function OrdersPage() {
       if (activeTab === 'measurements') return order.status === OrderStatus.AWAITING_MEASUREMENT;
       if (activeTab === 'current_master') return order.status === OrderStatus.AWAITING_MASTER_COMMISSION;
     } else if (userRole === PrismaRole.INTERMEDIARY) {
-      const historyIntermediaryStatuses: OrderStatus[] = [OrderStatus.COMPLETED, OrderStatus.CANCELLED];
-
       if (activeTab === 'awaiting_measurement_intermediary') return order.status === OrderStatus.AWAITING_MEASUREMENT;
       if (activeTab === 'awaiting_master_commission_intermediary') return order.status === OrderStatus.AWAITING_MASTER_COMMISSION;
-      if (activeTab === 'history_intermediary') return historyIntermediaryStatuses.includes(order.status);
     }
     return false;
   });
@@ -200,7 +197,6 @@ export default function OrdersPage() {
       const intermediaryTabs: { key: IntermediaryTab; label: string }[] = [
         { key: 'awaiting_measurement_intermediary', label: 'На замерах' },
         { key: 'awaiting_master_commission_intermediary', label: 'Ожидает оплаты от мастера' },
-        { key: 'history_intermediary', label: 'История' },
       ];
       return intermediaryTabs.map(tab => (
         <button

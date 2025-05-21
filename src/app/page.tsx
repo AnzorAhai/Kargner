@@ -36,6 +36,23 @@ export default function HomePage() {
     ? announcements.filter(a => a.category === selectedCategory) 
     : announcements;
 
+  // Load saved category filter for masters
+  useEffect(() => {
+    if (session?.user?.role === 'MASTER') {
+      const saved = localStorage.getItem('selectedCategory');
+      if (saved !== null) {
+        setSelectedCategory(saved);
+      }
+    }
+  }, [session]);
+
+  // Save category filter change for masters
+  useEffect(() => {
+    if (session?.user?.role === 'MASTER') {
+      localStorage.setItem('selectedCategory', selectedCategory);
+    }
+  }, [selectedCategory, session]);
+
   useEffect(() => {
     const fetchAnnouncements = async () => {
       try {

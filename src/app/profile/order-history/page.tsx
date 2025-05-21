@@ -36,8 +36,28 @@ const OrderHistoryPage = () => {
         }
       };
       fetchCompletedOrders();
-    } else if (status === 'authenticated' && session?.user?.role !== Role.MASTER) {
-        router.push('/');
+    } else if (status === 'authenticated' && (session?.user?.role as RoleType) === Role.INTERMEDIARY) {
+      const fetchIntermediaryOrders = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+          const response = await fetch('/api/orders');
+          if (!response.ok) throw new Error('Не удалось загрузить историю заказов');
+          const data = await response.json() as OrderWithRelations[];
+          const historyOrders = data.filter(order =>
+            order.status === OrderStatus.COMPLETED || order.status === OrderStatus.CANCELLED
+          );
+          setOrders(historyOrders);
+        } catch (err) {
+          console.error(err);
+          setError(err instanceof Error ? err.message : 'Произошла ошибка');
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchIntermediaryOrders();
+    } else if (status === 'authenticated') {
+      router.push('/');
     }
   }, [session, status, router]);
 
@@ -49,8 +69,8 @@ const OrderHistoryPage = () => {
     return <div className="container mx-auto p-4 text-center text-red-500">Ошибка: {error}</div>;
   }
 
-  if (!session?.user || session.user.role !== Role.MASTER) {
-    return <div className="container mx-auto p-4 text-center">Доступ запрещен. Эта страница только для Мастеров.</div>;
+  if (!session?.user || (session.user.role !== Role.MASTER && session.user.role !== Role.INTERMEDIARY)) {
+    return <div className="container mx-auto p-4 text-center">Доступ запрещен. Эта страница только для Мастеров и Посредников.</div>;
   }
 
   return (
