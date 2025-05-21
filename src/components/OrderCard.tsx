@@ -104,21 +104,20 @@ export default function OrderCard({
           )}
         </div>
 
+        <div className="text-lg font-semibold text-gray-800 mb-2 flex items-center">
+          <FaMapMarkerAlt className="inline mr-2 text-lg text-gray-800" />
+          {order.announcement.address}
+        </div>
+
         <p className="text-gray-600 text-sm mb-3 line-clamp-2">
           {order.announcement.description}
         </p>
 
-        <div className="text-xs text-gray-500 mb-1">
-          <FaMapMarkerAlt className="inline mr-1" />
-          {order.announcement.address}
-        </div>
-
         {(currentUserRole === PrismaRole.INTERMEDIARY || (currentUserRole === PrismaRole.MASTER && order.masterId === session?.user?.id)) && (
-          <div className="mt-2 text-xs border-t pt-2">
-            <p className="font-semibold text-gray-700">Контакт клиента:</p>
-            <p className="text-gray-600">Имя: {order.announcement.clientName}</p>
-            <div className="flex items-center text-gray-600">
-              <FaPhone className="mr-1 flex-shrink-0" />
+          <div className="mt-4 border-t pt-4">
+            <p className="text-lg font-semibold text-gray-800">Имя клиента: <span className="font-normal">{order.announcement.clientName}</span></p>
+            <div className="mt-1 flex items-center text-lg text-gray-800">
+              <FaPhone className="mr-2 flex-shrink-0 text-lg" />
               <span>{order.announcement.clientPhone}</span>
             </div>
           </div>

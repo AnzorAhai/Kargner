@@ -12,6 +12,7 @@ interface AnnouncementFormData {
   clientName: string;
   clientPhone: string;
   address: string;
+  category: string;
   imageUrl: string;
 }
 
@@ -24,6 +25,7 @@ export default function CreateAnnouncementPage() {
     clientName: '',
     clientPhone: '',
     address: '',
+    category: '',
     imageUrl: '',
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -80,8 +82,8 @@ export default function CreateAnnouncementPage() {
     e.preventDefault();
     setError('');
     // Validate required fields
-    if (!formData.title.trim() || !formData.description.trim() || !formData.clientName.trim() || !formData.clientPhone.trim() || !formData.address.trim()) {
-      setError('Пожалуйста, заполните все поля: заголовок, описание, имя клиента, телефон клиента, адрес');
+    if (!formData.title.trim() || !formData.description.trim() || !formData.clientName.trim() || !formData.clientPhone.trim() || !formData.address.trim() || !formData.category.trim()) {
+      setError('Пожалуйста, заполните все поля: заголовок, описание, имя клиента, телефон клиента, адрес, категория');
       return;
     }
     if (!imageFile) {
@@ -98,6 +100,7 @@ export default function CreateAnnouncementPage() {
       const payload = {
         title: formData.title.trim(),
         description: formData.description.trim(),
+        category: formData.category.trim(),
         clientName: formData.clientName.trim(),
         clientPhone: formData.clientPhone.trim(),
         address: formData.address.trim(),
@@ -216,6 +219,25 @@ export default function CreateAnnouncementPage() {
                   onChange={handleChange}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                 />
+              </div>
+
+              <div>
+                <label htmlFor="category" className="block text-sm font-medium text-gray-700">
+                  Категория
+                </label>
+                <select
+                  name="category"
+                  id="category"
+                  required
+                  value={formData.category}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                >
+                  <option value="">Выберите категорию</option>
+                  <option value="Ковка">Ковка</option>
+                  <option value="Укладка плитки">Укладка плитки</option>
+                  <option value="Алмазная резка">Алмазная резка</option>
+                </select>
               </div>
 
               <div>

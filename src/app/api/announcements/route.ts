@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import type { Announcement, Bid, User } from '@prisma/client';
+import type { Announcement, Bid, User } from '@prisma/client-generated';
 
 // Определим более точный тип для объявления с загруженными связями
 type AnnouncementWithDetails = Announcement & {
@@ -82,9 +82,9 @@ export async function POST(request: Request) {
     const body = await request.json();
     console.log('Received request body:', body);
 
-    const { title, description, address, imageUrl, clientName, clientPhone } = body;
+    const { title, description, address, imageUrl, clientName, clientPhone, category } = body;
 
-    if (!title || !description || !address || !imageUrl || !clientName || !clientPhone) {
+    if (!title || !description || !address || !imageUrl || !clientName || !clientPhone || !category) {
       return NextResponse.json(
         { error: 'Все поля обязательны для заполнения' },
         { status: 400 }
@@ -95,6 +95,7 @@ export async function POST(request: Request) {
       data: {
         title,
         description,
+        category,
         address,
         price: 0, // default price for intermediaries
         status: 'ACTIVE',

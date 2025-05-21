@@ -9,6 +9,7 @@ interface AnnouncementCardProps {
     id: string;
     title: string;
     description: string;
+    address: string;
     imageUrl?: string;
     createdAt: string;
     price: number;
@@ -43,6 +44,7 @@ export function AnnouncementCard({ announcement }: AnnouncementCardProps) {
       </div>
       <CardHeader className="pb-2">
         <CardTitle className="text-lg leading-tight truncate">{announcement.title}</CardTitle>
+        <p className="text-lg leading-tight truncate text-gray-700">{announcement.address}</p>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col justify-between pt-2">
         <div>

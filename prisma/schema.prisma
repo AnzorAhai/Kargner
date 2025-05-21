@@ -38,6 +38,7 @@ model Announcement {
   id          String    @id @default(cuid())
   title       String
   description String
+  category    String
   clientName  String
   clientPhone String
   address     String
