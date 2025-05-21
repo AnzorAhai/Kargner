@@ -19,18 +19,21 @@ export default function PushSubscribe() {
       const registerAndSubscribe = async () => {
         try {
           // Register the service worker
-          const swReg = await navigator.serviceWorker.register('/service-worker.js');
-          console.log('Service worker registered:', swReg);
+          await navigator.serviceWorker.register('/service-worker.js');
+          console.log('[PushSubscribe] Service worker registration initiated');
+
+          // Wait for the service worker to be active and controlling the page
+          const swReg = await navigator.serviceWorker.ready;
+          console.log('[PushSubscribe] Service worker ready', swReg);
 
           // Get existing subscription or subscribe anew
           const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
           const convertedKey = urlBase64ToUint8Array(publicKey);
-          const subscription =
-            (await swReg.pushManager.getSubscription()) ||
-            (await swReg.pushManager.subscribe({
-              userVisibleOnly: true,
-              applicationServerKey: convertedKey,
-            }));
+          const existingSub = await swReg.pushManager.getSubscription();
+          const subscription = existingSub || await swReg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: convertedKey,
+          });
 
           // Send subscription details to the server
           await fetch('/api/push/subscribe', {
@@ -38,9 +41,9 @@ export default function PushSubscribe() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(subscription),
           });
-          console.log('Push subscription sent to server');
+          console.log('[PushSubscribe] Push subscription sent to server');
         } catch (err) {
-          console.error('Failed to register SW or subscribe to push', err);
+          console.error('[PushSubscribe] Failed to register SW or subscribe to push', err);
         }
       };
 

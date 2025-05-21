@@ -1,20 +1,11 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 
 // Получение профиля пользователя
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const userId = params.id;
     console.log('API: Fetching user with ID:', userId);
-
-    // Проверяем подключение к базе данных
-    await prisma.$connect();
-    console.log('API: Successfully connected to database');
 
     // Получаем все поля пользователя, включая баланс, кроме пароля
     const user = await prisma.user.findUnique({
@@ -39,8 +30,6 @@ export async function GET(
       { error: 'Ошибка при получении данных пользователя' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -52,8 +41,6 @@ export async function PATCH(
   try {
     const userId = params.id;
     const body = await request.json();
-
-    await prisma.$connect();
 
     const user = await prisma.user.update({
       where: { id: userId },
@@ -69,7 +56,5 @@ export async function PATCH(
       { error: 'Ошибка при обновлении данных пользователя' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 } 
