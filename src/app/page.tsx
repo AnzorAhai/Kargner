@@ -36,9 +36,9 @@ export default function HomePage() {
     ? announcements.filter(a => a.category === selectedCategory) 
     : announcements;
 
-  // Load saved category filter for masters
+  // Load saved category filter for masters and intermediaries
   useEffect(() => {
-    if (session?.user?.role === 'MASTER') {
+    if (session?.user?.role === 'MASTER' || session?.user?.role === 'INTERMEDIARY') {
       const saved = localStorage.getItem('selectedCategory');
       if (saved !== null) {
         setSelectedCategory(saved);
@@ -46,9 +46,9 @@ export default function HomePage() {
     }
   }, [session]);
 
-  // Save category filter change for masters
+  // Save category filter change for masters and intermediaries
   useEffect(() => {
-    if (session?.user?.role === 'MASTER') {
+    if (session?.user?.role === 'MASTER' || session?.user?.role === 'INTERMEDIARY') {
       localStorage.setItem('selectedCategory', selectedCategory);
     }
   }, [selectedCategory, session]);
