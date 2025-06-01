@@ -93,8 +93,8 @@ export async function PATCH(request: Request) {
           measuredPrice: measuredPrice,
           status: { set: OrderStatus.AWAITING_MASTER_COMMISSION },
         },
-      });
-      return NextResponse.json(updatedOrder);
+    });
+    return NextResponse.json(updatedOrder);
     } catch (error) {
       console.error('Error updating measured price:', error);
       return NextResponse.json({ error: 'Error updating measured price' }, { status: 500 });
