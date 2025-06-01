@@ -236,7 +236,7 @@ export default function CreateAnnouncementPage() {
                   <option value="">Выберите категорию</option>
                   <option value="Ковка">Ковка</option>
                   <option value="Укладка плитки">Укладка плитки</option>
-                  <option value="Алмазная резка">Алмазная резка</option>
+                  <option value="Механизированная штукатурка">Механизированная штукатурка</option>
                 </select>
               </div>
 
